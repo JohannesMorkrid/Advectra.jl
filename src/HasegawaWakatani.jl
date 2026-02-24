@@ -22,7 +22,16 @@ using ProgressMeter, Interpolations
 include("diagnostics/diagnostics.jl")
 export radial_density_profile, poloidal_density_profile, radial_vorticity_profile,
        poloidal_vorticity_profile, poloidal_vorticity_profile, ProgressDiagnostic,
-       plot_frequencies, @diagnostics
+       plot_frequencies, @diagnostics, DiagnosticRecipe
+export cfl, radial_COM, plot_density, plot_vorticity, plot_potential,
+       potential_energy_integral, kinetic_energy_integral, total_energy_integral,
+       enstropy_energy_integral, resistive_dissipation_integral,
+       potential_dissipation_integral, kinetic_dissipation_integral,
+       viscous_dissipation_integral, enstropy_dissipation_integral,
+       energy_evolution_integral, enstropy_evolution_integral, radial_flux, poloidal_flux,
+       probe_density, probe_vorticity, probe_potential, probe_radial_velocity, probe_all,
+       progress, get_modes, get_log_modes, potential_energy_spectrum,
+       kinetic_energy_spectrum
 
 include("spectralODEProblem.jl")
 export SpectralODEProblem
