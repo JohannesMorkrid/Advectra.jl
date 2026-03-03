@@ -1,4 +1,4 @@
-using HasegawaWakatani
+using Advectra
 using CUDA
 
 domain = Domain(1024, 1024; Lx=50, Ly=50, MemoryType=CuArray, precision=Float64)

@@ -1,5 +1,5 @@
 ## Run all (alt+enter)
-using HasegawaWakatani
+using Advectra
 
 ## Run scheme test
 domain = Domain(256, 256; Lx=50, Ly=50)

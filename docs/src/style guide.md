@@ -30,11 +30,11 @@ be in the order of speed-up to the code or (?). In the case of domain that amoun
 Should follow order of struct construction and or order of struct fields.
 
 ## Adding TODOs
-When wanting to add TODO comments, please also create a [GitHub Issue](https://github.com/JohannesMorkrid/HasegawaWakatani.jl/issues)
+When wanting to add TODO comments, please also create a [GitHub Issue](https://github.com/JohannesMorkrid/Advectra.jl/issues)
  and add it to your TODO comment. Example
 
 ```
-# TODO add suitable test [#4](https://github.com/JohannesMorkrid/HasegawaWakatani.jl/issues/4)
+# TODO add suitable test [#4](https://github.com/JohannesMorkrid/Advectra.jl/issues/4)
 function example(...) = ...
 ```
 

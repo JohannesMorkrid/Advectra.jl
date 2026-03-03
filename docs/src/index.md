@@ -1,4 +1,4 @@
-# Hasegawa Wakatani Project Documentation
+# Advectra Project Documentation
 
 Welcome to the documentation page. 
 
@@ -6,14 +6,14 @@ Welcome to the documentation page.
     This tutorial just offered a quick glimpse on Julia's built-in documentation system, make sure to read the docs for more.
 
 ```@docs
-HasegawaWakatani.wave_vectors
-HasegawaWakatani.domain_kwargs
-HasegawaWakatani.area
-HasegawaWakatani.lengths
+Advectra.wave_vectors
+Advectra.domain_kwargs
+Advectra.area
+Advectra.lengths
 ```
 
 ```@autodocs
-Modules = [HasegawaWakatani]
+Modules = [Advectra]
 ```
 
 <!---Includes Domain, diagnostics, utilities, spectralSolve, spectralODEProblem and schemes

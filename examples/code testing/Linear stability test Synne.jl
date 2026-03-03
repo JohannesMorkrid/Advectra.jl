@@ -1,5 +1,5 @@
 ## Run all (alt+enter)
-using HasegawaWakatani
+using Advectra
 using CUDA
 
 # Run linear stability test

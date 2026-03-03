@@ -1,8 +1,8 @@
-using HasegawaWakatani
+using Advectra
 using Test
 
-@testset "HasegawaWakatani" begin
-# Write your tests here.
+@testset "Advectra" begin
+    # Write your tests here.
     include("domain_tests.jl")
     include("display_tests.jl")
 end

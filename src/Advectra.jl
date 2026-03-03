@@ -1,4 +1,4 @@
-module HasegawaWakatani
+module Advectra
 
 using FFTW, HDF5, H5Zblosc, LinearAlgebra, LaTeXStrings, MuladdMacro, UnPack, Base.Threads,
       Dates, Printf, GPUArrays, Adapt, Statistics

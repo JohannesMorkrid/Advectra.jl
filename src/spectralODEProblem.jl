@@ -188,7 +188,7 @@ function ensure!(cache, recipe, domain, problem_kwargs)
     cache[recipe] = build_operator(Val(operator), domain; kwargs...)
 end
 
-# TODO fix aliases method issue [#27](https://github.com/JohannesMorkrid/HasegawaWakatani.jl/issues/27)
+# TODO fix aliases method issue [#27](https://github.com/JohannesMorkrid/Advectra.jl/issues/27)
 function add_aliases!(operators, aliases, cache)
     #for alias in aliases
     #    # Get last, as thats whats being aliases

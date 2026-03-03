@@ -9,9 +9,9 @@ The *docs* folder is for documentation, which houses this tutorial, but was down
 ## Importing the modules
 As this code is not ''Released'' the following code needs to be included to import the code into a ``.jl`` file:
 ```
-using HasegawaWakatani
+using Advectra
 ```
-**NOTE:** This assumes the user is in the *HasegawaWakatani* folder.
+**NOTE:** This assumes the user is in the *Advectra* folder.
 
 ## Running a simulation
 To run a simulation the following is needed:
@@ -75,4 +75,4 @@ The ``N_samples`` is the number of raw solutions (data) outputed to the file. If
 Diagnostics is detailed in the master thesis. # TODO add to documentation!
 
 ## Additional functionalitites
-The ``send_mail`` method allows the code to send a mail to the user once a simulation is finnished, but requires the user to configure the *HasegawaWakatani/.env* file. Send a mail to get the app password for simulation.update@gmail.com.
+The ``send_mail`` method allows the code to send a mail to the user once a simulation is finnished, but requires the user to configure the *Advectra/.env* file. Send a mail to get the app password for simulation.update@gmail.com.

@@ -1,6 +1,6 @@
-name = "HasegawaWakatani"
-uuid = "77b4a5b0-6ed9-4abb-b852-b72faee8deaf"
-version = "0.13.0-DEV"
+name = "Advectra"
+uuid = "18c2cdae-170a-11f1-a6b3-2fcf687df0ab"
+version = "0.1.0"
 authors = ["JohannesMorkrid <johannes.e.morkrid@uit.no>"]
 
 [deps]
@@ -26,8 +26,8 @@ ComponentArrays = "b0b7db55-cfe3-40fc-9ded-d10e2dbeff66"
 SMTPClient = "c35d69d1-b747-5018-a192-25bc5e63c83d"
 
 [extensions]
-HasegawaWakataniComponentArraysExt = "ComponentArrays"
-HasegawaWakataniSMTPClientExt = "SMTPClient"
+AdvectraComponentArraysExt = "ComponentArrays"
+AdvectraSMTPClientExt = "SMTPClient"
 
 [compat]
 Adapt = "4.4.0"

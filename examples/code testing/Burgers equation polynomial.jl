@@ -1,5 +1,5 @@
 ## Run all (alt+enter)
-using HasegawaWakatani
+using Advectra
 
 # Run test for Burgers equation
 domain = Domain(1, 1024; Lx=1, Ly=20)
@@ -18,7 +18,7 @@ end
 parameters = (ν=0.0,)
 
 # Break down time 
-diff_y = HasegawaWakatani.build_operator(Val(:diff_y), domain)
+diff_y = Advectra.build_operator(Val(:diff_y), domain)
 dudy = diff_y(get_fwd(domain) * u0)
 t_b = -1 / (minimum(real(get_bwd(domain) * dudy)))
 
