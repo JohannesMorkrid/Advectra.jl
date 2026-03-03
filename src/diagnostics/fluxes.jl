@@ -43,7 +43,11 @@ end
 """
     radial_flux(state_hat, prob, time)
 
-  Computes Γ_0(t) = 1/(L_xL_y)∫_0^L_x∫_0^L_y nv_x dydx, does not take into acount dealiasing.
+  Computes 
+  ```math
+    \\Gamma_0(t) = \\frac{1}{L_xL_y}\\int_0^{L_x}\\int_0^{L_y} nv_x dydx,
+  ```
+  does not take into acount dealiasing.
 """
 function radial_flux(state_hat::AbstractGPUArray, prob, time; quadrature=nothing)
     @unpack domain, operators = prob
