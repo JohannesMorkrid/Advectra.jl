@@ -1,6 +1,6 @@
 ﻿# Advectra.jl
 
-[![Build Status](https://github.com/JohannesMorkrid/Advectra/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JohannesMorkrid/Advectra/actions/workflows/CI.yml?query=branch%3Amain)
+[![Build Status](https://github.com/JohannesMorkrid/Advectra.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JohannesMorkrid/Advectra.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://JohannesMorkrid.github.io/Advectra.jl/dev)
 
 _Advectra_ is a Bi-Spectral Advection Diffusion Solver written in Julia. The code solves generic partial differential-equations (PDEs) of the form:
@@ -155,4 +155,5 @@ repository using the following:
 Copyright (c) 2026 Johannes Mørkrid (johannes.e.morkrid@uit.no) and contributors for Advectra.jl
 
 Software licensed under the [MIT License](LICENSE).
+
 
