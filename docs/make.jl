@@ -7,4 +7,4 @@ makedocs(; sitename="Advectra",
          modules=[Advectra],
          warnonly=[:doctest, :missing_docs])
 
-deploydocs(; repo="https://github.com/JohannesMorkrid/Advectra.jl")
+deploydocs(; repo="github.com/JohannesMorkrid/Advectra.jl")
