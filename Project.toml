@@ -6,7 +6,6 @@ authors = ["JohannesMorkrid <johannes.e.morkrid@uit.no>"]
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
-Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 GPUArrays = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
 H5Zblosc = "c8ec2601-a99c-407f-b158-e79c03c2f5f7"
@@ -32,7 +31,6 @@ AdvectraSMTPClientExt = "SMTPClient"
 [compat]
 Adapt = "4.4.0"
 ComponentArrays = "0.15.29"
-Documenter = "1"
 FFTW = "1"
 GPUArrays = ">=10"
 H5Zblosc = "0.1"
