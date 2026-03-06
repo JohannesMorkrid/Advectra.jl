@@ -90,12 +90,12 @@ which is a bit more complicated, as the laplacian has to be inversed using the `
 method. Other than that the derivative in y is computed using `diff_y` and the Poisson
 bracket is computed using the `poisson_bracket`method.
 
-The right hand sides needs to be collected in a [`SpectralODEProblem`]:
+The right hand sides needs to be collected in a [`SpectralODEProblem`]():
 ```julia
 prob = SpectralODEProblem(Linear, NonLinear, u0, domain, time_span; p=parameters, dt=2.5e-3, diagnostics=diagnostics)
 ```
 alongside the initial state `u0`, the simulation [`Domain`](), the `time_span` to integrate 
-over, the `paramters` of the system and a `Vector` of [`Diagnostic`]()s to be performed.
+over, the `parameters` of the system and a `Vector` of [`Diagnostic`]()s to be performed.
 
 To solve the system, use the following method:
 ```julia
@@ -155,3 +155,4 @@ repository using the following:
 Copyright (c) 2026 Johannes Mørkrid (johannes.e.morkrid@uit.no) and contributors for Advectra.jl
 
 Software licensed under the [MIT License](LICENSE).
+
