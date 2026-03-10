@@ -3,6 +3,7 @@ using Advectra
 using CUDA
 
 domain = Domain(256, 256; Lx=50, Ly=50, MemoryType=CuArray, precision=Float32)
+
 # Check documentation to see other initial conditions
 ic = initial_condition(isolated_blob, domain)
 
@@ -39,8 +40,7 @@ diagnostics = @diagnostics [
     probe_density(; positions=[(5, 0), (8.5, 0), (11.25, 0), (14.375, 0)], stride=10),
     radial_COM(; stride=1),
     progress(; stride=-1),
-    # cfl(; stride=250, silent=true, storage_limit="2KB"),
-    sample_density(stride=10),
+    cfl(; stride=250, silent=true, storage_limit="2KB"),
     plot_vorticity(; stride=1000),
     plot_potential(; stride=1000),
     plot_density(; stride=1000)
@@ -52,7 +52,7 @@ prob = SpectralODEProblem(Linear, NonLinear, ic, domain, tspan; p=parameters, dt
 
 # The output
 output = Output(prob; filename="Garcia 2005 PoP.h5", simulation_name=:parameters,
-                storage_limit="5 GB", store_locally=false, resume=false)
+                storage_limit="0.5 GB", store_locally=false, resume=false)
 
 # Solve and plot
 sol = spectral_solve(prob, MSS3(), output;)
