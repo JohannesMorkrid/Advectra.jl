@@ -29,7 +29,7 @@ function NonLinear(du, u, operators, p, t)
 end
 
 # Parameters
-parameters = (ν=1e-2, κ=3e-2)
+parameters = (ν=1e-2, κ=1e-2)
 
 # Time interval
 tspan = [0.0, 20.0]
@@ -51,7 +51,7 @@ prob = SpectralODEProblem(Linear, NonLinear, ic, domain, tspan; p=parameters, dt
                           boussinesq=true, diagnostics=diagnostics)
 
 # The output
-output = Output(prob; filename="Garcia 2005 PoP.h5", simulation_name="output",
+output = Output(prob; filename="Garcia 2005 PoP.h5", simulation_name=:parameters,
                 storage_limit="5 GB", store_locally=false, resume=false)
 
 # Solve and plot
