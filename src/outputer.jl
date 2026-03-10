@@ -280,7 +280,7 @@ function handle_simulation_name(simulation_name, prob, filename)
     elseif simulation_name == :parameters
         return parameter_string(prob.p)
     elseif simulation_name isa String
-        return nothing
+        return simulation_name
     else
         error("$simulation_name is not a valid input")
     end
@@ -1031,8 +1031,18 @@ end
 
 Checks if the existing HDF5 simulation group matches the current problem configuration
 for critical parameters: Nx, Ny, dt, and real_transform.
+
+!!! warning "User Responsibility"
+    Advectra only checks a subset of critical numerical parameters (Nx, Ny, dt, real_transform). 
+    It does **not** perform an exhaustive check of all physical input parameters.
+    It is the responsibility of the user to ensure the simulations are physically compatible.
 """
 function validate_restart_attributes(simulation::HDF5.Group, prob::SpectralODEProblem)
+    @warn "Advectra only checks a subset of critical numerical parameters (Nx, Ny, dt, real_transform). " *
+        "Advectra does not check if ALL input parameters are identical to the run " *
+              "you are resuming from. It is the responsibility of the user to make sure " *
+              "the simulations are compatible."
+
     # List of attributes to check and their corresponding values in 'prob' or 'prob.domain'
     # Note: Using string keys as they are stored in HDF5
     expected_values = Dict(
