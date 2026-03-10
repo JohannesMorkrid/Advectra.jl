@@ -138,14 +138,14 @@ function setup_hdf5_storage(prob, t0;
                             store_hdf=true,
                             h5_kwargs=(blosc=3,),
                             resume)
-    simulation = setup_simulation_group(filename, simulation_name, prob;
-                                        store_hdf=store_hdf, h5_kwargs=h5_kwargs, resume=resume)
+    simulation = setup_simulation_group(filename, simulation_name, prob; resume=resume,
+                                        store_hdf=store_hdf, h5_kwargs=h5_kwargs)
 
     if !resume
         # if file already exists it will be deleted and must be created again
         rm(simulation.file.filename)
-        simulation = setup_simulation_group(filename, simulation_name, prob;
-                                            store_hdf=store_hdf, h5_kwargs=h5_kwargs, resume=false)
+        simulation = setup_simulation_group(filename, simulation_name, prob; resume=false,
+                                            store_hdf=store_hdf, h5_kwargs=h5_kwargs)
     end
 
     if !isnothing(simulation)
@@ -164,51 +164,15 @@ end
 
 # TODO check if new dim of fields, in that case probably should re-create simulation group
 """
-    setup_simulation_group(filename, simulation_name, prob; kwargs...)
+    setup_hdf5_storage(filename, simulation_name, N_samples::Int, state, prob, t0; 
+                       store_hdf=store_hdf, h5_kwargs=h5_kwargs)
 
-Initialize or open an HDF5 group for simulation storage, acting as the primary entry 
-point for the HDF5 file structure.
-
-This function handles the file system operations (path creation), file opening in 
-read/write mode (`"cw"`), and the internal organization of simulation data into 
-named groups.
-
-# Arguments
-- `filename::String`: The path to the HDF5 file. Automatically adds `.h5` if missing 
-  and ensures the parent directory exists.
-- `simulation_name`: A identifier for the group (e.g., a `Symbol` like `:timestamp` 
-  or a custom `String`).
-- `prob::SpectralODEProblem`: The problem instance used to determine metadata 
-  attributes and validation parameters.
-
-# Keyword Arguments
-- `store_hdf::Bool=true`: If `false`, the function skips all HDF5 operations and returns `nothing`.
-- `h5_kwargs::NamedTuple=(blosc=3,)`: Compression and filter settings for HDF5 datasets.
-- `resume::Bool=false`: If `true`, the function validates that the existing group's 
-  attributes (Nx, Ny, dt, etc.) match the current `prob` via [`validate_restart_attributes`](@ref).
-
-# Logic Flow
-1. **Path Handling**: Resolves the full filepath and creates directories if necessary.
-2. **File Access**: Opens the file in "cw" mode (creates if missing, otherwise opens for writing).
-3. **Group Management**:
-    - **New Group**: Creates the group and writes essential simulation attributes.
-    - **Existing Group**: Opens the group. If `resume` is `true`, it triggers a 
-      strict validation check. If `resume` is `false`, the calling function 
-      typically handles overwriting.
-
-# Returns
-- `HDF5.Group` if `store_hdf` is true.
-- `nothing` if `store_hdf` is false.
-
-# See Also
-- [`write_attributes`](@ref)
-- [`validate_restart_attributes`](@ref)
-- [`handle_simulation_name`](@ref)
+  Creates a *HDF5* file, if not existing, and writes a group with `simulation_name` to it, 
+  refered to as a `simulation` group. If the simulation group does not exists, the `h5_kwargs` 
+  are applied to the `"fields"` and `"t"` datasets. The opened `simulation` is returned.
 """
-function setup_simulation_group(filename, simulation_name, prob;
-                                store_hdf=true,
-                                h5_kwargs=(blosc=3,),
-                                resume=false) # Add resume here
+function setup_simulation_group(filename, simulation_name, prob; store_hdf=true,
+                                h5_kwargs=(blosc=3,), resume=false)
     if store_hdf
         filename = add_h5_if_missing(filename)
         filepath = determine_filepath(filename)
@@ -225,11 +189,10 @@ function setup_simulation_group(filename, simulation_name, prob;
         else
             # Existing group: Open it
             simulation = open_group(file, group_name)
-            
-            # IF RESUMING, VALIDATE THE ATTRIBUTES
+
             if resume
-                validate_restart_attributes(simulation, prob)
-                @info "Restart validation successful for simulation: $group_name"
+                validate_resume_attributes(simulation, prob)
+                @info "Resume validation successful for simulation: $group_name"
             end
         end
 
@@ -1025,9 +988,8 @@ function Base.show(io::IO, m::MIME"text/plain", output::Output)
     end
 end
 
-
 """
-    validate_restart_attributes(simulation::HDF5.Group, prob::SpectralODEProblem)
+    validate_resume_attributes(simulation::HDF5.Group, prob::SpectralODEProblem)
 
 Checks if the existing HDF5 simulation group matches the current problem configuration
 for critical parameters: Nx, Ny, dt, and real_transform.
@@ -1037,42 +999,31 @@ for critical parameters: Nx, Ny, dt, and real_transform.
     It does **not** perform an exhaustive check of all physical input parameters.
     It is the responsibility of the user to ensure the simulations are physically compatible.
 """
-function validate_restart_attributes(simulation::HDF5.Group, prob::SpectralODEProblem)
+function validate_resume_attributes(simulation::HDF5.Group, prob::SpectralODEProblem)
     @warn "Advectra only checks a subset of critical numerical parameters (Nx, Ny, dt, real_transform). " *
-        "Advectra does not check if ALL input parameters are identical to the run " *
-              "you are resuming from. It is the responsibility of the user to make sure " *
-              "the simulations are compatible."
+          "Advectra does not check if ALL input parameters are identical to the run " *
+          "you are resuming from. It is the responsibility of the user to make sure " *
+          "the simulations are compatible."
 
     # List of attributes to check and their corresponding values in 'prob' or 'prob.domain'
-    # Note: Using string keys as they are stored in HDF5
-    expected_values = Dict(
-        "dt" => prob.dt,
-        "Nx" => prob.domain.Nx,
-        "Ny" => prob.domain.Ny,
-        "real_transform" => string(prob.domain.real_transform)
-    )
+    expected_values = Dict("dt" => prob.dt,
+                           "Nx" => prob.domain.Nx,
+                           "Ny" => prob.domain.Ny,
+                           "real_transform" => prob.domain.real_transform)
 
     for (key, expected) in expected_values
         if !haskey(attributes(simulation), key)
-            error("Restart Error: Attribute '$key' missing from existing simulation group.")
+            error("Resume Error: Attribute '$key' missing from existing simulation group.")
         end
-        
+
         actual = read_attribute(simulation, key)
-        
-        # We convert to string for the transform comparison, or handle numeric types
-        if key == "real_transform"
-            if string(actual) != string(expected)
-                error("Restart Mismatch: '$key' was $(actual) in file, but is $(expected) now.")
-            end
-        else
-            if !(actual == expected)
-                error("Restart Mismatch: '$key' was $(actual) in file, but is $(expected) now.")
-            end
+
+        if actual != expected
+            error("Resume Mismatch: '$key' was $(actual) in file, but is $(expected) now.")
         end
     end
     return true
 end
-
 
 import Base.close
 close(output::Output) = close(output.simulation.file)
