@@ -9,6 +9,9 @@ function spectral_solve(prob::SOP, scheme::SA=MSS3(),
     # Initialize cache and tracking
     cache, t, step = initialize_solve(prob, scheme, output)
 
+    # Link Phi to cache
+    link_variables_to_cache!(prob, cache)
+
     # Time step
     dt = prob.dt
 
@@ -60,3 +63,10 @@ function initialize_solve(prob::SOP, scheme::SA,
     end
     return cache, t, step
 end
+
+function link_variables_to_cache!(prob, cache)
+    slices = eachslice(cache.u; dims=3)
+    prob.p = merge(prob.p, (; ϕ=slices[1]))
+end
+
+#
