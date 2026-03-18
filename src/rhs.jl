@@ -1,51 +1,223 @@
-function N(du, u, d, p, t)
-    n, Ω, ϕ = eachslice(u)
-    g, κ = p["g"], p["kappa"]
-    ϕ = d.solvePhi(Ω)
-    du[1] = -d.poissonBracket(u, v) + d.dy(ϕ) - g * d.dy(n) - σₙ * d.spectral_exp(ϕ)
-    du[2] = -d.poissonBracket(u, v) - g * d.dy(n) + σₒ * (1 - d.spectral_exp(ϕ))
-    return du
+# ------------------------------------------------------------------------------------------
+#                            Gradient-Driven Sheath Interchange                             
+# ------------------------------------------------------------------------------------------
+
+# ---------------------------------- Bohm Normalization ------------------------------------
+
+# ----------------------------------- Nonlinear Sheaths ------------------------------------
+
+function SI_GD_B(du, u, operators, p, t)
+    @unpack solve_phi, diff_x, diff_y = operators
+    @unpack poisson_bracket, grad_dot_grad, specral_expm1 = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack ζ, σ, ν, κ = p
+    ϕ = solve_phi(η, Ω)
+
+    dη .= poisson_bracket(η, ϕ) - (κ - ζ) * diff_y(ϕ) - ζ * diff_y(η) +
+          ν * grad_dot_grad(η, η) - 2ν * κ * diff_x(η) - σ * specral_expm1(-ϕ)
+    dΩ .= poisson_bracket(Ω, ϕ) - ζ * diff_y(η) - σ * specral_expm1(-ϕ)
 end
 
-function N(du, u, d, p, t)
-    n, Ω, ϕ = eachslice(u)
-    g, σₙ, σₒ = p["g"], p["kappa"]
-    ϕ = solvePhi(Ω, d)
-    du[1] = -poissonBracket(u, v, d) + dy(ϕ, d) - g * dy(n, d) - σₙ * spectral_exp(ϕ, d)
-    du[2] = -poissonBracket(u, v, d) - g * dy(n, d) + σₒ * (1 - d.spectral_exp(ϕ, d))
-    return du
+# ------------------------------- Different Damping Models ---------------------------------
+
+function SI_GD_NPD_B(du, u, operators, p, t)
+    @unpack solve_phi, poisson_bracket, diff_x, diff_y, specral_expm1 = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack ζ, σ, ν, κ = p
+    ϕ = solve_phi(η, Ω)
+
+    dη .= poisson_bracket(η, ϕ) - (κ - ζ) * diff_y(ϕ) - ζ * diff_y(η) -
+          2ν * κ * diff_x(η) - σ * specral_expm1(-ϕ)
+    dΩ .= poisson_bracket(Ω, ϕ) - ζ * diff_y(η) - σ * specral_expm1(-ϕ)
 end
 
-# Objectives: CUDA support, easy to write rhs without thinking too much about BTS, 
-# pre-allocated operator results, if calculated once during timestep then use calculation
-function N(du, u, d, p, t)
-    n, Ω, ϕ = eachslice(u)
-    g, σₙ, σₒ = unpack(p)
-    ϕ = solvePhi(Ω, d)
-    du[1] = -poissonBracket(u, v, d) + dy(ϕ, d) - g * dy(n, d) - σₙ * spectral_exp(ϕ, d)
-    du[2] = -poissonBracket(u, v, d) - g * dy(n, d) + σₒ * (1 - d.spectral_exp(ϕ, d))
-    return du
+function SI_GD_NX_B(du, u, operators, p, t)
+    @unpack solve_phi, poisson_bracket, grad_dot_grad, diff_y, spectral_expm1 = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack ζ, σ, ν, κ = p
+    ϕ = solve_phi(η, Ω)
+
+    dη .= poisson_bracket(η, ϕ) - (κ - ζ) * diff_y(ϕ) - ζ * diff_y(η) +
+          ν * grad_dot_grad(η, η) - σ * specral_expm1(-ϕ)
+    dΩ .= poisson_bracket(Ω, ϕ) - ζ * diff_y(η) - σ * specral_expm1(-ϕ)
 end
 
-function N(du, u, d, p, t)
-    # Auxilary variables
-    @unpack diff_y, poisson_bracket, solve_phi = d #-> references
+function SI_GD_SD_B(du, u, operators, p, t)
+    @unpack solve_phi, poisson_bracket, diff_y, spectral_expm1 = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack ζ, σ, κ = p
+    ϕ = solve_phi(η, Ω)
 
-    # Computations
-    ϕ = solve_phi(Ω) #-> cache.phi
-    dθ .= poisson_bracket(θ, ϕ) #-> store vx and vy once?
-    dΩ .= poisson_bracket(Ω, ϕ) .- diff_y(θ) #, can then reuse vx and vy
+    dη .= poisson_bracket(η, ϕ) - (κ - ζ) * diff_y(ϕ) - ζ * diff_y(η) -
+          σ * specral_expm1(-ϕ)
+    dΩ .= poisson_bracket(Ω, ϕ) - ζ * diff_y(η) - σ * specral_expm1(-ϕ)
 end
 
-function N(du, u, d, p, t)
-    n, Ω, ϕ = eachslice(u)
-    g, σₙ, σₒ = unpack(p)
-    ϕ = solvePhi(Ω, d)
-    #^^ This is good start
+const SI_GD_NPD_NX_B = SI_GD_SD_B
 
-    #vv This is the hard part
-    #du[3] is not utilized because phi is not updated!
-    du[1] = -poissonBracket(u, v, d) + diff_y(ϕ, d) - g * diff_y(n, d) - σₙ * spectral_exp(ϕ, d)
-    du[2] = -poissonBracket(u, v, d) - g * diff_y(n, d) + σₒ * (1 - d.spectral_exp(ϕ, d))
-    return du
+# ------------------------------------- Linear Sheath --------------------------------------
+
+function SI_GD_LS_B(du, u, operators, p, t)
+    @unpack solve_phi, poisson_bracket, grad_dot_grad, diff_x, diff_y = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack ζ, σ, ν, κ = p
+    ϕ = solve_phi(η, Ω)
+
+    dη .= poisson_bracket(η, ϕ) - (κ - ζ) * diff_y(ϕ) - ζ * diff_y(η) +
+          ν * grad_dot_grad(η, η) - 2ν * κ * diff_x(η) + σ * ϕ
+    dΩ .= poisson_bracket(Ω, ϕ) - ζ * diff_y(η) + σ * ϕ
 end
+
+# ------------------------------- Different Damping Models ---------------------------------
+
+function SI_GD_LS_NPD_B(du, u, operators, p, t)
+    @unpack solve_phi, poisson_bracket, diff_x, diff_y = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack ζ, σ, ν, κ = p
+    ϕ = solve_phi(η, Ω)
+
+    dη .= poisson_bracket(η, ϕ) - (κ - ζ) * diff_y(ϕ) - ζ * diff_y(η) -
+          2ν * κ * diff_x(η) + σ * ϕ
+    dΩ .= poisson_bracket(Ω, ϕ) - ζ * diff_y(η) + σ * ϕ
+end
+
+function SI_GD_LS_NX_B(du, u, operators, p, t)
+    @unpack solve_phi, poisson_bracket, grad_dot_grad, diff_y = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack ζ, σ, ν, κ = p
+    ϕ = solve_phi(η, Ω)
+
+    dη .= poisson_bracket(η, ϕ) - (κ - ζ) * diff_y(ϕ) - ζ * diff_y(η) +
+          ν * grad_dot_grad(η, η) + σ * ϕ
+    dΩ .= poisson_bracket(Ω, ϕ) - ζ * diff_y(η) + σ * ϕ
+end
+
+function SI_GD_LS_SD_B(du, u, operators, p, t)
+    @unpack solve_phi, poisson_bracket, diff_y = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack ζ, σ, κ = p
+    ϕ = solve_phi(η, Ω)
+
+    dη .= poisson_bracket(η, ϕ) - (κ - ζ) * diff_y(ϕ) - ζ * diff_y(η) + σ * ϕ
+    dΩ .= poisson_bracket(Ω, ϕ) - ζ * diff_y(η) + σ * ϕ
+end
+
+const SI_GD_LS_NPD_NX_B = SI_GD_LS_SD_B
+
+# -------------------------------- Gyro-Bohm Normalization ---------------------------------
+
+# ----------------------------------- Nonlinear Sheaths ------------------------------------
+
+function SI_GD_GB(du, u, operators, p, t)
+    @unpack solve_phi, diff_x, diff_y = operators
+    @unpack poisson_bracket, grad_dot_grad, specral_expm1 = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack ζ, σ, ν, κ = p
+    ϕ = solve_phi(η, Ω)
+
+    dη .= poisson_bracket(η, ϕ) - (1 - ζ) * diff_y(ϕ) - ζ * diff_y(η) +
+          ν * κ * grad_dot_grad(η, η) - 2ν * κ * diff_x(η) - (σ / κ) * specral_expm1(-κ * ϕ)
+    dΩ .= poisson_bracket(Ω, ϕ) - ζ * diff_y(η) - (σ / κ) * specral_expm1(-κ * ϕ)
+end
+
+# ------------------------------- Different Damping Models ---------------------------------
+
+function SI_GD_NPD_GB(du, u, operators, p, t)
+    @unpack solve_phi, poisson_bracket, diff_x, diff_y, specral_expm1 = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack ζ, σ, ν, κ = p
+    ϕ = solve_phi(η, Ω)
+
+    dη .= poisson_bracket(η, ϕ) - (1 - ζ) * diff_y(ϕ) - ζ * diff_y(η) -
+          2ν * κ * diff_x(η) - (σ / κ) * specral_expm1(-κ * ϕ)
+    dΩ .= poisson_bracket(Ω, ϕ) - ζ * diff_y(η) - (σ / κ) * specral_expm1(-κ * ϕ)
+end
+
+function SI_GD_NX_GB(du, u, operators, p, t)
+    @unpack solve_phi, poisson_bracket, grad_dot_grad, diff_y, spectral_expm1 = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack ζ, σ, ν, κ = p
+    ϕ = solve_phi(η, Ω)
+
+    dη .= poisson_bracket(η, ϕ) - (1 - ζ) * diff_y(ϕ) - ζ * diff_y(η) +
+          ν * κ * grad_dot_grad(η, η) - (σ / κ) * specral_expm1(-κ * ϕ)
+    dΩ .= poisson_bracket(Ω, ϕ) - ζ * diff_y(η) - (σ / κ) * specral_expm1(-κ * ϕ)
+end
+
+function SI_GD_SD_GB(du, u, operators, p, t)
+    @unpack solve_phi, poisson_bracket, diff_y, spectral_expm1 = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack ζ, σ, κ = p
+    ϕ = solve_phi(η, Ω)
+
+    dη .= poisson_bracket(η, ϕ) - (1 - ζ) * diff_y(ϕ) - ζ * diff_y(η) -
+          (σ / κ) * specral_expm1(-κ * ϕ)
+    dΩ .= poisson_bracket(Ω, ϕ) - ζ * diff_y(η) - (σ / κ) * specral_expm1(-κ * ϕ)
+end
+
+const SI_GD_NPD_NX_GB = SI_GD_SD_GB
+
+# ------------------------------------- Linear Sheath --------------------------------------
+
+function SI_GD_LS_GB(du, u, operators, p, t)
+    @unpack solve_phi, poisson_bracket, grad_dot_grad, diff_x, diff_y = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack ζ, σ, ν, κ = p
+    ϕ = solve_phi(η, Ω)
+
+    dη .= poisson_bracket(η, ϕ) - (1 - ζ) * diff_y(ϕ) - ζ * diff_y(η) +
+          ν * κ * grad_dot_grad(η, η) - 2ν * κ * diff_x(η) + σ * ϕ
+    dΩ .= poisson_bracket(Ω, ϕ) - ζ * diff_y(η) + σ * ϕ
+end
+
+# ------------------------------- Different Damping Models ---------------------------------
+
+function SI_GD_LS_NPD_GB(du, u, operators, p, t)
+    @unpack solve_phi, poisson_bracket, diff_x, diff_y = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack ζ, σ, ν, κ = p
+    ϕ = solve_phi(η, Ω)
+
+    dη .= poisson_bracket(η, ϕ) - (1 - ζ) * diff_y(ϕ) - ζ * diff_y(η) -
+          2ν * κ * diff_x(η) + σ * ϕ
+    dΩ .= poisson_bracket(Ω, ϕ) - ζ * diff_y(η) + σ * ϕ
+end
+
+function SI_GD_LS_NX_GB(du, u, operators, p, t)
+    @unpack solve_phi, poisson_bracket, grad_dot_grad, diff_y = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack ζ, σ, ν, κ = p
+    ϕ = solve_phi(η, Ω)
+
+    dη .= poisson_bracket(η, ϕ) - (1 - ζ) * diff_y(ϕ) - ζ * diff_y(η) +
+          ν * κ * grad_dot_grad(η, η) + σ * ϕ
+    dΩ .= poisson_bracket(Ω, ϕ) - ζ * diff_y(η) + σ * ϕ
+end
+
+function SI_GD_LS_SD_GB(du, u, operators, p, t)
+    @unpack solve_phi, poisson_bracket, diff_y = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack ζ, σ = p
+    ϕ = solve_phi(η, Ω)
+
+    dη .= poisson_bracket(η, ϕ) - (1 - ζ) * diff_y(ϕ) - ζ * diff_y(η) + σ * ϕ
+    dΩ .= poisson_bracket(Ω, ϕ) - ζ * diff_y(η) + σ * ϕ
+end
+
+const SI_GD_LS_NPD_NX_GB = SI_GD_LS_SD_GB
