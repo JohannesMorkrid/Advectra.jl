@@ -1,5 +1,5 @@
 ## Run all (alt+enter)
-using HasegawaWakatani
+using Advectra
 using CUDA
 
 domain = Domain(256, 256; Lx=48, Ly=48, MemoryType=CuArray, precision=Float64)

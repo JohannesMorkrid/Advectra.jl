@@ -70,7 +70,7 @@ function probe_field!(out::T, field::T, indices::T) where {T<:AbstractGPUArray}
     return
 end
 
-# TODO fix SubArray issue [#26](https://github.com/JohannesMorkrid/HasegawaWakatani.jl/issues/26)
+# TODO fix SubArray issue [#26](https://github.com/JohannesMorkrid/Advectra.jl/issues/26)
 # GPU "optimized" out-of place without interpolation
 # function probe_field(field::AbstractGPUArray, domain::AbstractDomain,
 #                      indices::AbstractGPUArray{<:Integer},

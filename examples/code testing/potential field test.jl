@@ -1,5 +1,5 @@
 #Potential field test
-using HasegawaWakatani
+using Advectra
 
 function analytical_solution(x, y; l=1)
     r2 = x^2 + y^2
@@ -19,7 +19,7 @@ using Plots
 surface(Ω)
 
 Ω_hat = get_fwd(domain) * Ω
-solve_phi = HasegawaWakatani.build_operator(Val(:solve_phi), domain)
+solve_phi = Advectra.build_operator(Val(:solve_phi), domain)
 ϕ_hat = solve_phi(Ω_hat)
 ϕ = get_bwd(domain) * ϕ_hat
 #Remove the value at boundary since should be zero for periodicity

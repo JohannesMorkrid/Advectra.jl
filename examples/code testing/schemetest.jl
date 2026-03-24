@@ -1,5 +1,5 @@
 ## Run all (alt+enter)
-include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
+using Advectra
 
 ## Run scheme test for Burgers equation
 domain = Domain(1, 1, 1, 1; dealiased=false)

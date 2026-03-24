@@ -1,5 +1,5 @@
 ## Run all (alt+enter)
-using HasegawaWakatani
+using Advectra
 using CUDA
 
 domain = Domain(1024, 1024; Lx=50, Ly=50, MemoryType=CuArray, precision=Float32)
@@ -20,7 +20,7 @@ end
 # Non-linear operator
 function NonLinear(du, u, operators, p, t)
     @unpack laplacian, solve_phi, poisson_bracket, quadratic_term, diff_x,
-            diff_y = operators
+    diff_y = operators
     η, Ω = eachslice(u; dims=3)
     dη, dΩ = eachslice(du; dims=3)
     @unpack κ, ν = p

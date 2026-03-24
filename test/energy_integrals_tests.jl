@@ -2,13 +2,13 @@
 #                                  Energy Diagnostic Tests                                  
 # ------------------------------------------------------------------------------------------
 
-using HasegawaWakatani
+using Advectra
 using CUDA
-import HasegawaWakatani: build_diagnostic, build_operator
+import Advectra: build_diagnostic, build_operator
 
 # Minimal construction
 domain = Domain(256, 256; MemoryType=CuArray)
-ic = initial_condition(random_crossphased, domain) |> HasegawaWakatani.memory_type(domain)
+ic = initial_condition(random_crossphased, domain) |> Advectra.memory_type(domain)
 dt = 0.0001
 
 # Emulates SpectralODEProblem
@@ -61,7 +61,7 @@ enstropy_evolution = build_diagnostic(Val(:enstropy_evolution_integral);
                                       diffusivity_symbol=:c, viscosity_symbol=:c)
 enstropy_evolution(ic_hat, prob, 0.0)
 
-import HasegawaWakatani: parsevals_theorem, integral_of_quadratic_term
+import Advectra: parsevals_theorem, integral_of_quadratic_term
 # Test robustness, should give 1
 domain = Domain(256, 256; real_transform=false, Lx=10, Ly=10)
 parsevals_theorem(ones(256, 256), domain)
@@ -78,7 +78,7 @@ prob = (; domain=domain,
                    quadratic_term=build_operator(Val(:quadratic_term), domain)),
         p=(c=0.01,),
         dt=dt)
-A = ones(4, 8) |> HasegawaWakatani.memory_type(domain)
+A = ones(4, 8) |> Advectra.memory_type(domain)
 A_hat = get_fwd(domain) * A
 integral_of_quadratic_term(A_hat, A_hat, domain, prob.operators.quadratic_term)
 prob.operators.quadratic_term.dealiasing_coefficient

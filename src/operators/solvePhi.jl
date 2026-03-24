@@ -171,13 +171,14 @@ function (op::SolvePhiNonBoussinesq{:linear})(out::AbstractArray, n::AbstractArr
     dηdy .*= dealiasing_coefficient
 
     # To compare to ϖ
-    C2 .= zero.(C2)
+    fill!(C2, 0)
     out .= phi
 
     # Compute residuals
-    res = norm(C2 - ϖ)
+    @. C1 = C2 - ϖ
+    res = sqrt(sum(abs2, C1))
     iters = 0
-    reltol = @allowscalar rtol * norm(ϖ)
+    reltol = rtol * sqrt(sum(abs2, ϖ))
 
     # Iterate to approximately solve for potential ϕ
     while res > max(reltol, atol) && iters < maxiters
@@ -219,7 +220,8 @@ function (op::SolvePhiNonBoussinesq{:linear})(out::AbstractArray, n::AbstractArr
         out .= phi .- out
 
         # Update residuals and iters count
-        res = norm(C2 - ϖ)
+        @. C1 = C2 - ϖ
+        res = sqrt(sum(abs2, C1))
         iters += 1
     end
     return out
@@ -256,13 +258,14 @@ function (op::SolvePhiNonBoussinesq{:log})(out::AbstractArray, η::AbstractArray
     dηdy .*= dealiasing_coefficient
 
     # To compare to ϖ
-    C2 .= zero.(C2)
+    fill!(C2, 0)
     out .= phi
 
     # Compute residuals
-    res = norm(C2 - ϖ)
+    @. C1 = C2 - ϖ
+    res = sqrt(sum(abs2, C1))
     iters = 0
-    reltol = @allowscalar rtol * norm(ϖ)
+    reltol = rtol * sqrt(sum(abs2, ϖ))
 
     # Iterate to approximately solve for potential ϕ
     while res > max(reltol, atol) && iters < maxiters
@@ -304,7 +307,8 @@ function (op::SolvePhiNonBoussinesq{:log})(out::AbstractArray, η::AbstractArray
         out .= phi .- out
 
         # Update residuals and iters count
-        res = norm(C2 - ϖ)
+        @. C1 = C2 - ϖ
+        res = sqrt(sum(abs2, C1))
         iters += 1
     end
     return out
@@ -344,14 +348,15 @@ function (op::SolvePhiRelaxation{:linear})(out::AbstractArray, n::AbstractArray,
     dηdy .*= dealiasing_coefficient
 
     # To compare to ϖ
-    C2 .= zero.(C2)
+    fill!(C2, 0)
     out .= initial_phi
     previous_phi .= initial_phi
 
     # Compute residuals
-    res = norm(C2 - ϖ)
+    @. C1 = C2 - ϖ
+    res = sqrt(sum(abs2, C1))
     iters = 0
-    reltol = @allowscalar rtol * norm(ϖ)
+    reltol = rtol * sqrt(sum(abs2, ϖ))
 
     # Iterate to approximately solve for potential ϕ
     while res > max(reltol, atol) && iters < maxiters
@@ -397,7 +402,8 @@ function (op::SolvePhiRelaxation{:linear})(out::AbstractArray, n::AbstractArray,
         previous_phi .= out
 
         # Update residuals and iters count
-        res = norm(C2 - ϖ)
+        @. C1 = C2 - ϖ
+        res = sqrt(sum(abs2, C1))
         iters += 1
     end
     return out
@@ -434,14 +440,15 @@ function (op::SolvePhiRelaxation{:log})(out::AbstractArray, η::AbstractArray,
     dηdy .*= dealiasing_coefficient
 
     # To compare to ϖ
-    C2 .= zero.(C2)
+    fill!(C2, 0)
     out .= initial_phi
     previous_phi .= initial_phi
 
     # Compute residuals
-    res = norm(C2 - ϖ)
+    @. C1 = C2 - ϖ
+    res = sqrt(sum(abs2, C1))
     iters = 0
-    reltol = @allowscalar rtol * norm(ϖ)
+    reltol = rtol * sqrt(sum(abs2, ϖ))
 
     # Iterate to approximately solve for potential ϕ
     while res > max(reltol, atol) && iters < maxiters
@@ -487,7 +494,8 @@ function (op::SolvePhiRelaxation{:log})(out::AbstractArray, η::AbstractArray,
         previous_phi .= out
 
         # Update residuals and iters count
-        res = norm(C2 - ϖ)
+        @. C1 = C2 - ϖ
+        res = sqrt(sum(abs2, C1))
         iters += 1
     end
     return out

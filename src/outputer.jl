@@ -129,25 +129,6 @@ end
 
 # -------------------------------------- HDF5 Setup ----------------------------------------
 
-"""
-    check_if_output_file_exists(simulation::HDF5.Group, resume::Bool)
-
-  Checks if the output file already exists when not resuming a previous simulation. If it 
-  exists, the user is prompted to confirm overwriting the file.
-"""
-function check_if_output_file_exists_and_resume_is_false(simulation::HDF5.Group,
-                                                         resume::Bool)
-    if !resume && isfile(simulation.file.filename)
-        answer = Base.prompt("The output file already exists, and this run is not resuming a previous simulation. Do you want to overwrite it? (y/n)")
-        if answer == "y"
-            return true
-        else
-            error("Aborting simulation to prevent overwriting existing file.")
-        end
-    end
-    return false
-end
-
 function setup_hdf5_storage(prob, t0;
                             filename,
                             simulation_name,
@@ -157,14 +138,13 @@ function setup_hdf5_storage(prob, t0;
                             store_hdf=true,
                             h5_kwargs=(blosc=3,),
                             resume)
-    simulation = setup_simulation_group(filename, simulation_name, prob;
+    simulation = setup_simulation_group(filename, simulation_name, prob; resume=resume,
                                         store_hdf=store_hdf, h5_kwargs=h5_kwargs)
 
-    if check_if_output_file_exists_and_resume_is_false(simulation, resume)
-
+    if !resume
         # if file already exists it will be deleted and must be created again
         rm(simulation.file.filename)
-        simulation = setup_simulation_group(filename, simulation_name, prob;
+        simulation = setup_simulation_group(filename, simulation_name, prob; resume=false,
                                             store_hdf=store_hdf, h5_kwargs=h5_kwargs)
     end
 
@@ -184,38 +164,36 @@ end
 
 # TODO check if new dim of fields, in that case probably should re-create simulation group
 """
-    setup_hdf5_storage(filename, simulation_name, N_samples::Int, state, prob, t0;
-    store_hdf=store_hdf, h5_kwargs=h5_kwargs)
+    setup_hdf5_storage(filename, simulation_name, N_samples::Int, state, prob, t0; 
+                       store_hdf=store_hdf, h5_kwargs=h5_kwargs)
 
   Creates a *HDF5* file, if not existing, and writes a group with `simulation_name` to it, 
   refered to as a `simulation` group. If the simulation group does not exists, the `h5_kwargs` 
   are applied to the `"fields"` and `"t"` datasets. The opened `simulation` is returned.
 """
-function setup_simulation_group(filename, simulation_name, prob;
-                                store_hdf=true,
-                                h5_kwargs=(blosc=3,))
+function setup_simulation_group(filename, simulation_name, prob; store_hdf=true,
+                                h5_kwargs=(blosc=3,), resume=false)
     if store_hdf
         filename = add_h5_if_missing(filename)
-
         filepath = determine_filepath(filename)
-
-        # Create path if not created
         mkpath(dirname(filepath))
 
-        # Create HDF5 file
+        # Open in "cw" mode (Read/Write, create if not exists)
         file = h5open(filepath, "cw")
-
-        # Create simulation name
         group_name = handle_simulation_name(simulation_name, prob, filename)
 
-        # Checks how to handle simulation group
         if !haskey(file, group_name)
-            # Create simulation group
+            # Fresh start: Create group and write attributes
             simulation = create_group(file, group_name)
-            # Store attributes
             write_attributes(simulation, prob)
         else
+            # Existing group: Open it
             simulation = open_group(file, group_name)
+
+            if resume
+                validate_resume_attributes(simulation, prob)
+                @info "Resume validation successful for simulation: $group_name"
+            end
         end
 
         return simulation
@@ -265,7 +243,7 @@ function handle_simulation_name(simulation_name, prob, filename)
     elseif simulation_name == :parameters
         return parameter_string(prob.p)
     elseif simulation_name isa String
-        return nothing
+        return simulation_name
     else
         error("$simulation_name is not a valid input")
     end
@@ -1008,6 +986,43 @@ function Base.show(io::IO, m::MIME"text/plain", output::Output)
         print(io, "\n-")
         show(io, m, diagnostic)
     end
+end
+
+"""
+    validate_resume_attributes(simulation::HDF5.Group, prob::SpectralODEProblem)
+
+Checks if the existing HDF5 simulation group matches the current problem configuration
+for critical parameters: Nx, Ny, dt, and real_transform.
+
+!!! warning "User Responsibility"
+    Advectra only checks a subset of critical numerical parameters (Nx, Ny, dt, real_transform). 
+    It does **not** perform an exhaustive check of all physical input parameters.
+    It is the responsibility of the user to ensure the simulations are physically compatible.
+"""
+function validate_resume_attributes(simulation::HDF5.Group, prob::SpectralODEProblem)
+    @warn "Advectra only checks a subset of critical numerical parameters (Nx, Ny, dt, real_transform). " *
+          "Advectra does not check if ALL input parameters are identical to the run " *
+          "you are resuming from. It is the responsibility of the user to make sure " *
+          "the simulations are compatible."
+
+    # List of attributes to check and their corresponding values in 'prob' or 'prob.domain'
+    expected_values = Dict("dt" => prob.dt,
+                           "Nx" => prob.domain.Nx,
+                           "Ny" => prob.domain.Ny,
+                           "real_transform" => prob.domain.real_transform)
+
+    for (key, expected) in expected_values
+        if !haskey(attributes(simulation), key)
+            error("Resume Error: Attribute '$key' missing from existing simulation group.")
+        end
+
+        actual = read_attribute(simulation, key)
+
+        if actual != expected
+            error("Resume Mismatch: '$key' was $(actual) in file, but is $(expected) now.")
+        end
+    end
+    return true
 end
 
 import Base.close

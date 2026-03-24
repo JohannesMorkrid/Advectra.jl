@@ -44,7 +44,7 @@ Actions tab
 # Juliaup
 * If you are struggling with a folder having a constant julia version check 'juliaup override status'
 
-# Hasegawa Wakatani package tips
+# Advectra package tips
 * Make sure the broadcasting is done correctly, it is easy to mess up re-assign a variable 
 instead of writing to it elementwise in-place.
 * Having first order derivatives in either the linear or non-linear term does not seem to matter

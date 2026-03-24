@@ -1,10 +1,10 @@
-using HasegawaWakatani, Documenter
-DocMeta.setdocmeta!(HasegawaWakatani, :DocTestSetup, :(using HasegawaWakatani);
-                    recursive = true)
+using Documenter
+using Advectra
+DocMeta.setdocmeta!(Advectra, :DocTestSetup, :(using Advectra); recursive=true)
 
-makedocs(; sitename = "HasegawaWakatani",
-         authors = "Johannes Mørkrid",
-         modules = [HasegawaWakatani],
-         warnonly = [:doctest, :missing_docs])
+makedocs(; sitename="Advectra",
+         authors="Johannes Mørkrid",
+         modules=[Advectra],
+         warnonly=[:doctest, :missing_docs])
 
-deploydocs(; repo = "github.com/JohannesMorkrid/HasegawaWakatani.jl.git")
+deploydocs(; repo="github.com/JohannesMorkrid/Advectra.jl")

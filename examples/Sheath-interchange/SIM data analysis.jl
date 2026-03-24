@@ -1,6 +1,5 @@
 ## Run all (alt+enter)
-include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
-cd(relpath(@__DIR__, pwd()))
+using Advectra
 
 domain = Domain(256, 256, 48, 48; dealiased=true)
 using Statistics
@@ -60,7 +59,7 @@ data = simulation["fields"][:, :, :, :]
 t = simulation["t"][:]
 default(; legend=false)
 anim = @animate for i in axes(data, 4)
-    heatmap(data[:, :, 1, i], aspect_ratio=:equal, xaxis=L"x", yaxis=L"y",
+    heatmap(data[:, :, 1, i]; aspect_ratio=:equal, xaxis=L"x", yaxis=L"y",
             title=L"n(t=" * "$(round(t[i], digits=0)))")
 end
 gif(anim, "delete me.gif"; fps=20)
@@ -78,8 +77,7 @@ using JLD
 save("density probe.jld", "probe data", n)
 
 # Extract data to do local python analysis
-include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
-cd(relpath(@__DIR__, pwd()))
+using Advectra
 fid = h5open("output/sheath-interchange g=1e-3.h5", "r")
 
 data = fid[keys(fid)[1]]["All probe/data"][:, :, 1:1:end]
@@ -120,8 +118,7 @@ fid[keys(fid)[1]]
 data = fid[keys(fid)[1]]["fields"][:, :, :, :]
 heatmap(data[:, :, 1, end])#,aspect_ratio=:equal)
 
-include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
-cd(relpath(@__DIR__, pwd()))
+using Advectra
 fid = h5open("output/gyro-bohm=1e-2 CUDA.h5", "r")
 sim = fid[keys(fid)[1]]
 data = sim["All probe/data"][:, :, 1:N]
