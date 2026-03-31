@@ -3,9 +3,9 @@ Currently the only supported domain is the default Two-dimensional Bi-Spectral d
 
 The most general constructor takes the form:
 ```julia
-    Domain(Nx::Integer, Ny::Integer; Lx::Number=1, Ly::Number=1, 
-            MemoryType::Type{<:AbstractArray}=Array, precision::DataType=Float64, 
-            real_transform::Bool=true, dealiased::Bool=true, x0::Number=-Lx / 2, y0::Number=-Ly / 2)
+Domain(Nx::Integer, Ny::Integer; Lx::Number=1, Ly::Number=1, 
+        MemoryType::Type{<:AbstractArray}=Array, precision::DataType=Float64, 
+        real_transform::Bool=true, dealiased::Bool=true, x0::Number=-Lx/2, y0::Number=-Ly/2)
 ```
 where $L_i$ and $N_i$ is the length and size respectively of the $i$-th dimension.
 
