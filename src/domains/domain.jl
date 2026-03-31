@@ -74,7 +74,8 @@ Domain(Nx:128, Ny:256, Lx:1.0, Ly:2.0, real_transform:true, dealiased:true, Memo
 - `y`: spatial position of each point along the y-axis. Uniformly distributed by default.
 - `kx`: wave vector components along x-axis.
 - `ky`: wave vector components along y-axis.
-    
+- `transforms`: collection of fwd and bwd transform methods.
+
 !!! warning
     Restricted to 2D for the time being.
 """
