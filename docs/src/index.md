@@ -5,7 +5,9 @@ _Advectra_ is a Two-Dimensional Bi-Spectral Advection Diffusion Solver package w
 ## Overview
 The package solves generic partial differential-equations (PDEs) of the form:
 
-$$ \frac{\partial u}{\partial t} = \mathcal{L}(u, p, t) + \mathcal{N}(u, p, t),$$
+```math
+\frac{\partial u}{\partial t} = \mathcal{L}(u, p, t) + \mathcal{N}(u, p, t),
+```
 
 where $u$ is the state at time $t$, $p$ are additional parameters, $\mathcal{L}$ is a linear operator usually associated with a diffusion process and $\mathcal{N}$ is a non-linear operator associated with the advective terms.
 
