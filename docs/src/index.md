@@ -23,7 +23,7 @@ The code features:
 - Mixed Stiffly-Stable ([`MSS`]()) time integrators; up to third order
 - [`HDF5`](https://github.com/JuliaIO/HDF5.jl) data output for binary format storage with [`Blosc`](https://github.com/JuliaIO/HDF5.jl/tree/master/filters/H5Zblosc) compression
 - Pseudospectral methods for non-linear terms using FFTs ([`FFTW`](https://github.com/JuliaMath/FFTW.jl))
-- 2/3-[`dealiasing`]() off quadratic terms and non-linear functions
+- 3/2-[`dealiasing`]() of non-linear operators
 - [`Diagnostic`](Diagnostics.md)'s for sampling at high frequencies with minimal storage
 - GPU support ([`CUDA`](https://github.com/JuliaGPU/CUDA.jl), [`AMD`](https://github.com/JuliaGPU/AMDGPU.jl))
 - Easy construction of canonical [`initial conditions`]() for PDEs
