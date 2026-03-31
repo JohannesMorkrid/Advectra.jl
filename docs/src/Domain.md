@@ -19,7 +19,7 @@ In addition to the parsed args the `Domain` struct also stores:
 - `ky`: wave vector components along y-axis.
 - `transforms`: collection of fwd and bwd transform methods.
 
-The `Domain` struct is the backbone for allocating `Array`s and computing all the [`SpectralOperators`](SpectralOperators.jl) as well transforming between physical and spectral space. 
+The `Domain` struct is the backbone for allocating `Array`s and computing all the [`SpectralOperators`](SpectralOperators.md) as well transforming between physical and spectral space. 
 
 The remainder of the kwargs are explained in their own subsection.
 
