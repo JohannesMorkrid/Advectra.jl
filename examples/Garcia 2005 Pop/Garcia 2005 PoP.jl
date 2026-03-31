@@ -2,6 +2,7 @@
 using Advectra
 using CUDA
 
+# (default) MemoryType=Array, but also possible with MemoryType=ROCArray etc.
 domain = Domain(256, 256; Lx=50, Ly=50, MemoryType=CuArray, precision=Float32)
 
 # Check documentation to see other initial conditions
@@ -41,9 +42,7 @@ diagnostics = @diagnostics [
     radial_COM(; stride=1),
     progress(; stride=-1),
     cfl(; stride=250, silent=true, storage_limit="2KB"),
-    plot_vorticity(; stride=1000),
-    plot_potential(; stride=1000),
-    plot_density(; stride=1000)
+    #plot_density(; stride=1000), plot_vorticity(; stride=1000), plot_potential(; stride=1000)
 ]
 
 # Collection of specifications defining the problem to be solved
