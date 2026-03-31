@@ -10,7 +10,7 @@ $$ \frac{\partial u}{\partial t} = \mathcal{L}(u, p, t) + \mathcal{N}(u, p, t),$
 where $u$ is the state at time $t$, $p$ are additional parameters, $\mathcal{L}$ is a linear operator usually associated with a diffusion process and $\mathcal{N}$ is a non-linear operator associated with the advective terms.
 
 The package attempts to make solving the differential equations in spectral space as
-trivial as possible through the use of [`SpectralOperators`](@ref SpectralOperators.md) so that the user does not
+trivial as possible through the use of [`SpectralOperators`](SpectralOperators.md) so that the user does not
 need to translate the equations to their spectral counterpart themselves. In addition,
 the package support solving multiple nested PDEs simultanously. While the code is
 specialized towards solving plasma fluid equations, it is also well suited for generic
@@ -18,13 +18,13 @@ advection diffusion problems.
 
 The code features:
 
-- A bi-periodic [`Domain`](@ref Domain.md)
-- [`SpectralOperators`](@ref SpectralOperators.md) to compute spatial derivatives in spectral space
+- A bi-periodic [`Domain`](Domain.md)
+- [`SpectralOperators`](SpectralOperators.md) to compute spatial derivatives in spectral space
 - Mixed Stiffly-Stable ([`MSS`]()) time integrators; up to third order
 - [`HDF5`](https://github.com/JuliaIO/HDF5.jl) data output for binary format storage with [`Blosc`](https://github.com/JuliaIO/HDF5.jl/tree/master/filters/H5Zblosc) compression
 - Pseudospectral methods for non-linear terms using FFTs ([`FFTW`](https://github.com/JuliaMath/FFTW.jl))
 - 2/3-[`dealiasing`]() off quadratic terms and non-linear functions
-- [`Diagnostic`](@ref Diagnostics.md)'s for sampling at high frequencies with minimal storage
+- [`Diagnostic`](Diagnostics.md)'s for sampling at high frequencies with minimal storage
 - GPU support ([`CUDA`](https://github.com/JuliaGPU/CUDA.jl), [`AMD`](https://github.com/JuliaGPU/AMDGPU.jl))
 - Easy construction of canonical [`initial conditions`]() for PDEs
 - Option to [`remove modes`]() of interest
@@ -47,7 +47,7 @@ julia> import Pkg; Pkg.add("Advectra")
 ## Contributing
 
 Issues and contributions through pull requests are welcome. Please consult the
-[contributor guide](@ref contributor-guide.md) before submitting a pull request.
+[contributor guide](contributor-guide.md) before submitting a pull request.
 
 ## Citation
 
@@ -70,4 +70,4 @@ repository using the following:
 
 Copyright (c) 2026 Johannes Mørkrid (johannes.e.morkrid@uit.no) and contributors for Advectra.jl
 
-Software licensed under the [MIT License](LICENSE).
+Software licensed under the [MIT License](https://github.com/JohannesMorkrid/Advectra.jl/blob/main/LICENSE).
