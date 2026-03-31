@@ -34,12 +34,18 @@ Advectra.SpectralODEProblem
 Advectra.Output
 ```
 
-## Schemes (time-integration)
+## Schemes (time-integration) {#schemes}
 ```@docs 
 Advectra.MSS1
 Advectra.MSS2
 Advectra.MSS3
 ```
+
+## Utilities {#utilities}
+```@docs 
+Advectra.log_space
+Advectra.send_mail
+``` 
 
 # Full API:
 
