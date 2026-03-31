@@ -12,7 +12,7 @@ makedocs(; sitename="Advectra.jl",
              :cross_references],
          repo="github.com/JohannesMorkrid/Advectra.jl",
          pages=["Advectra.jl: Advection-Diffusion Spectral Solver" => "index.md",
-             "Installation" => "Installation.md",
+             "Installation" => "installation.md",
              "Getting started" => "getting-started.md",
              "Examples" => "examples.md",
              "Implementation details" => [
