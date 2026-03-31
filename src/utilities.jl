@@ -58,23 +58,48 @@ function random_crossphased(domain::AbstractDomain; value=10^-6, cross_phase=pi 
     [real(ifft(n_hat));;; real(ifft(phi_hat))]
 end
 
-function isolated_blob(domain::AbstractDomain; density::Symbol=:lin, kwargs...)
-    isolated_blob(domain, Val(density); kwargs...)
+function isolated_blob(domain::AbstractDomain; density::Symbol=:lin, ndims=2, kwargs...)
+    isolated_blob(domain, Val(density); ndims, kwargs...)
 end
 
-function isolated_blob(domain::AbstractDomain, ::Val{:lin}; kwargs...)
+function isolated_blob(domain::AbstractDomain, ::Val{:lin}; ndims=2, kwargs...)
     u0 = initial_condition(gaussian, domain; kwargs...)
-    cat(u0, zero(u0); dims=3)
+    ic = zeros(size(u0)..., ndims)
+    ic[:, :, 1] .= u0
+    return ic
 end
 
-function isolated_blob(domain::AbstractDomain, ::Val{:log}; kwargs...)
+function isolated_blob(domain::AbstractDomain, ::Val{:log}; ndims=2, kwargs...)
     u0 = initial_condition(log_gaussian, domain; kwargs...)
-    cat(u0, zero(u0); dims=3)
+    ic = zeros(size(u0)..., ndims)
+    ic[:, :, 1] .= u0
+    return ic
 end
 
 broadcastable_ic(::typeof(random_phase)) = Val(false)
 broadcastable_ic(::typeof(random_crossphased)) = Val(false)
 broadcastable_ic(::typeof(isolated_blob)) = Val(false)
+
+function isolated_temperature_blob(domain::AbstractDomain; density::Symbol=:lin, ndims=3,
+                                   kwargs...)
+    isolated_temperature_blob(domain, Val(density); ndims, kwargs...)
+end
+
+function isolated_temperature_blob(domain::AbstractDomain, ::Val{:lin}; ndims=3, kwargs...)
+    u0 = initial_condition(gaussian, domain; kwargs...)
+    ic = zeros(size(u0)..., ndims)
+    ic[:, :, 3] .= u0
+    return ic
+end
+
+function isolated_temperature_blob(domain::AbstractDomain, ::Val{:log}; ndims=3, kwargs...)
+    u0 = initial_condition(log_gaussian, domain; kwargs...)
+    ic = zeros(size(u0)..., ndims)
+    ic[:, :, 3] .= u0
+    return ic
+end
+
+broadcastable_ic(::typeof(isolated_temperature_blob)) = Val(false)
 
 # ---------------------- Inverse functions / transforms ------------------------------------
 
@@ -136,7 +161,7 @@ end
 """
 frequencies(state)
 
-  Displays a heatmap of the mode-amplitudes in logscale.
+  Displays a heatmap of the mode-amplitudes using log scale.
 """
 frequencies(state::AbstractArray) = heatmap(log10.(abs.(state)); title="Frequencies")
 
