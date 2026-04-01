@@ -20,6 +20,8 @@ makedocs(; sitename="Advectra.jl",
                  "SpectralOperators.md",
                  "Diagnostics.md",
                  "boussinesq-vs-non-boussinesq.md",
+                 "SpectralODEProblem.md",
+                 "output.md",
                  "time-integration.md"
              ], # Examples
              "Extensions" => "extensions.md",
