@@ -17,7 +17,7 @@ makedocs(; sitename="Advectra.jl",
              "Examples" => "examples.md",
              "Manual" => [
                  "Domain.md",
-                 "initial_condition.md",
+                 "initial_conditions.md",
                  "SpectralOperators.md",
                  "Diagnostics.md",
                  "boussinesq-vs-non-boussinesq.md",
