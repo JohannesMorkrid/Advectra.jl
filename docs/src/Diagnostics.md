@@ -1,4 +1,4 @@
-# Available Diagnostics
+# Diagnostics
 
 ## CFL
 ```

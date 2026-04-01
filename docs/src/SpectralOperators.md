@@ -1,4 +1,4 @@
-# Available Diagnostics
+# Spectral Operators
 
 ## Spatial Derivatives
 One of the benefits of spectral codes is that computing spatial derivatives becomes trivial, as Linear-Operators becomes a multiplication, in Fourier space:
