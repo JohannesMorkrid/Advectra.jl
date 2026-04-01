@@ -15,14 +15,16 @@ makedocs(; sitename="Advectra.jl",
              "Installation" => "installation.md",
              "Getting started" => "getting-started.md",
              "Examples" => "examples.md",
-             "Implementation details" => [
+             "Manual" => [
                  "Domain.md",
+                 "initial_condition.md",
                  "SpectralOperators.md",
                  "Diagnostics.md",
                  "boussinesq-vs-non-boussinesq.md",
                  "SpectralODEProblem.md",
                  "output.md",
-                 "time-integration.md"
+                 "time-integration.md",
+                 "Solver.md"
              ], # Examples
              "Extensions" => "extensions.md",
              "Contributing" => "contributor-guide.md",
