@@ -31,7 +31,7 @@ The code features:
 - Easy construction of canonical [`initial conditions`]() for PDEs
 - Option to [`remove modes`]() of interest
 
-## Installation
+<!--## Installation
 
 Advectra.jl will soon be installable through the Julia package manager. From the Julia REPL,
 type `]` to enter the Pkg REPL mode and run:
@@ -45,6 +45,7 @@ Or, equivalently, via the `Pkg` API:
 ```julia
 julia> import Pkg; Pkg.add("Advectra")
 ```
+-->
 
 ## Contributing
 
