@@ -22,6 +22,18 @@ function build_diagnostic(::Val{:sample_vorticity}; kwargs...)
                metadata="Sampled vorticity field")
 end
 
+# -------------------------------------- Temperature ---------------------------------------
+
+function sample_temperature(state, prob, time; kwargs...)
+    selectdim(state, ndims(prob.domain) + 1, 3)
+end
+
+function build_diagnostic(::Val{:sample_temperature}; kwargs...)
+    Diagnostic(; name="Temperature",
+               method=sample_temperature,
+               metadata="Sampled temperature field")
+end
+
 # --------------------------------------- Potential ----------------------------------------
 
 function sample_potential(state_hat, prob, time; kwargs...)

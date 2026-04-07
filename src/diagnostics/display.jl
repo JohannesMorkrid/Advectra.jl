@@ -42,6 +42,22 @@ function build_diagnostic(::Val{:plot_vorticity}; dt, kwargs...)
                kwargs=kwargs)
 end
 
+# -------------------------------------- Temperature ---------------------------------------
+
+function plot_temperature(state, prob, time; digits=2, kwargs...)
+    T = selectdim(state, ndims(prob.domain) + 1, 3) |> Array
+    plot_field(prob.domain, T, time; field_name=L"T", digits=digits, color=:jet, kwargs...)
+end
+
+function build_diagnostic(::Val{:plot_temperature}; dt, kwargs...)
+    kwargs = (; digits=ceil(Int, -log10(dt)))
+    Diagnostic(; name="Plot temperature",
+               method=plot_temperature,
+               metadata="Display temperature",
+               stores_data=false,
+               kwargs=kwargs)
+end
+
 # --------------------------------------- Potential ----------------------------------------
 
 function plot_potential(state_hat, prob, time; digits=2, kwargs...)
