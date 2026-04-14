@@ -9,7 +9,7 @@ domain = Domain(256, 256; Lx=50, Ly=50, MemoryType=CuArray, precision=Float32)
 ic = initial_condition(isolated_blob, domain)
 
 # Linear operator
-function Linear(du, u, operators, p, t)
+function Linear!(du, u, operators, p, t)
     @unpack κ, ν = p
     θ, Ω = eachslice(u; dims=3)
     dθ, dΩ = eachslice(du; dims=3)
@@ -19,7 +19,7 @@ function Linear(du, u, operators, p, t)
 end
 
 # Non-linear operator
-function NonLinear(du, u, operators, p, t)
+function NonLinear!(du, u, operators, p, t)
     θ, Ω = eachslice(u; dims=3)
     dθ, dΩ = eachslice(du; dims=3)
     @unpack diff_y, poisson_bracket, solve_phi = operators
@@ -46,8 +46,8 @@ diagnostics = @diagnostics [
 ]
 
 # Collection of specifications defining the problem to be solved
-prob = SpectralODEProblem(Linear, NonLinear, ic, domain, tspan; p=parameters, dt=2.5e-3,
-                          boussinesq=true, diagnostics=diagnostics)
+prob = SpectralODEProblem(Linear!, NonLinear!, ic, domain, tspan; p=parameters, dt=2.5e-2,
+                          boussinesq=true, diagnostics=diagnostics, operators=:all)
 
 # The output
 output = Output(prob; filename="Garcia 2005 PoP.h5", simulation_name=:parameters,

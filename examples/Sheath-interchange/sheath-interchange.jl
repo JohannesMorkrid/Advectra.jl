@@ -6,7 +6,7 @@ domain = Domain(256, 256; Lx=48, Ly=48, MemoryType=CuArray, precision=Float64)
 ic = initial_condition(random_crossphased, domain; value=1e-3)
 
 # Linear operator
-function Linear(du, u, operators, p, t)
+function Linear!(du, u, operators, p, t)
     @unpack laplacian = operators
     η, Ω = eachslice(u; dims=3)
     dη, dΩ = eachslice(du; dims=3)
@@ -16,7 +16,7 @@ function Linear(du, u, operators, p, t)
 end
 
 # Non-linear operator, linearized potential and diffusion
-function NonLinear(du, u, operators, p, t)
+function NonLinear!(du, u, operators, p, t)
     @unpack solve_phi, poisson_bracket, diff_y, quadratic_term = operators
     η, Ω = eachslice(u; dims=3)
     dη, dΩ = eachslice(du; dims=3)
@@ -54,7 +54,7 @@ diagnostics = @diagnostics [
 ]
 
 # Collection of specifications defining the problem to be solved
-prob = SpectralODEProblem(Linear, NonLinear, ic, domain, tspan; p=parameters, dt=1e-3,
+prob = SpectralODEProblem(Linear!, NonLinear!, ic, domain, tspan; p=parameters, dt=1e-3,
                           operators=:all, diagnostics=diagnostics)
 
 # Inverse transform
