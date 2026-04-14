@@ -41,8 +41,8 @@ diagnostics = @diagnostics [
     probe_density(; positions=[(5, 0), (8.5, 0), (11.25, 0), (14.375, 0)], stride=10),
     radial_COM(; stride=1),
     progress(; stride=-1),
-    cfl(; stride=250, silent=true, storage_limit="2KB"),
-    #plot_density(; stride=1000), plot_vorticity(; stride=1000), plot_potential(; stride=1000)
+    cfl(; stride=250, silent=true, storage_limit="2KB")
+    #,plot_density(; stride=1000), plot_vorticity(; stride=1000), plot_potential(; stride=1000)
 ]
 
 # Collection of specifications defining the problem to be solved
@@ -55,9 +55,3 @@ output = Output(prob; filename="Garcia 2005 PoP.h5", simulation_name=:parameters
 
 # Solve and plot
 sol = spectral_solve(prob, MSS3(), output;)
-
-using Plots
-using LaTeXStrings
-plot(sol.simulation["Density probe/t"][:], sol.simulation["Density probe/data"][:, :]';
-     xlabel=L"$t$",
-     ylabel=L"$\theta$", label=["(5.0, 0.0)" "(8.5, 0.0)" "(11.25, 0.0)" "(14.375, 0.0)"])
