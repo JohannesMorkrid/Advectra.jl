@@ -30,8 +30,7 @@ Domain_set = [d1, d2, d3]
         
         # --- Test ∂x ---
         dx_op = build_operator(Val(:diff_x), d)
-        # Using .coeffs .* u_spec because * might not be overloaded yet
-        du_spec = dx_op.coeffs .* u_spec
+        du_spec = dx_op(u_spec)
         du_phys = Array(bwd * du_spec)
         
         expected_dx = @. (m * k0x) * cos(m * k0x * d.x') * cos(n * k0y * d.y)
@@ -39,7 +38,7 @@ Domain_set = [d1, d2, d3]
 
         # --- Test ∂y ---
         dy_op = build_operator(Val(:diff_y), d)
-        dv_spec = dy_op.coeffs .* u_spec
+        dv_spec = dy_op(u_spec)
         dv_phys = Array(bwd * dv_spec)
         
         expected_dy = @. -(n * k0y) * sin(m * k0x * d.x') * sin(n * k0y * d.y)
@@ -62,14 +61,14 @@ Domain_set = [d1, d2, d3]
         T = Advectra.get_precision(d)
         fwd, bwd = Advectra.get_fwd(d), Advectra.get_bwd(d)
 
-        dx = build_operator(Val(:diff_x), d)
-        dy = build_operator(Val(:diff_y), d)
+        diff_x = build_operator(Val(:diff_x), d)
+        diff_y = build_operator(Val(:diff_y), d)
         
         # Wrap in try-catch in case QuadraticTerm isn't fully implemented yet
         try
             q_term = build_operator(Val(:quadratic_term), d)
             gdg = build_operator(Val(:grad_dot_grad), d; 
-                                 diff_x=dx, diff_y=dy, quadratic_term=q_term)
+                                 diff_x=diff_x, diff_y=diff_y, quadratic_term=q_term)
 
             # Test with simple smooth fields
             u_phys = @. cos(2π * d.x' / d.Lx) + 0*d.y
