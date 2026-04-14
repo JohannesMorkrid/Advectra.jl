@@ -39,7 +39,7 @@ end
 @views (op::ElwiseOperator)(u::AbstractArray) = op.coeffs .* u
 
 # In-place operator
-(op::ElwiseOperator)(du::T, u::T) where {T<:AbstractArray} = du .= op.coeffs .* u
+(op::ElwiseOperator)(du::AbstractArray, u::AbstractArray) = du .= op.coeffs .* u
 
 # To be able to use @. without applying LinearOperator to array element
 import Base.Broadcast: broadcasted
