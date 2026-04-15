@@ -111,7 +111,7 @@ gaussian_x(x, y; A=1, l=1, x0=0) = A * exp(-(x - x0)^2 / (2 * l^2))
 
 2D Gaussian function varying in `y` only:
 ```math
-f(x,y) = A\\exp{\\left(-\\frac{(y-y_0)^2}{2l^2}\right)}
+f(x,y) = A\\exp{\\left(-\\frac{(y-y_0)^2}{2l^2}\\right)}
 ```
 # Arguments
 - `A`: Amplitude (default `1`)
@@ -125,7 +125,7 @@ gaussian_y(x, y; A=1, l=1, y0=0) = A * exp(-(y - y0)^2 / (2 * l^2))
 
 2D Sinusoidal function:
 ```math
-f(x,y) = \\sin\\left(\\frac{2\\pi N_x x}{l_x}\\right)\\cos\\left(\frac{2\\pi N_y y}{l_y}\\right)
+f(x,y) = \\sin\\left(\\frac{2\\pi N_x x}{l_x}\\right)\\cos\\left(\\frac{2\\pi N_y y}{l_y}\\right)
 ```
 
 # Arguments
@@ -182,10 +182,10 @@ exponential_x(x, y; κ=1) = exp(-κ * x)
 2D Piecewise quadratic profile in `y` only:
 
 ```math
-f(x,y) = \begin{cases}
+f(x,y) = \\begin{cases}
             1 - y^2, & |y| \\le 1 \\
             0, & |y| > 1
-         \end{cases}
+         \\end{cases}
 ```
 """
 quadratic_y(x, y) = abs(y) <= 1 ? 1 - y .^ 2 : 0.0
@@ -198,9 +198,6 @@ Complex-valued spatial white noise field.
 ```math
 f(x,y) = \\sigma (a + ib), \\quad a,b \\sim \\mathcal{N}(0,1)
 ```
-# Notes
-- Zero mean
-- No spatial correlation
 """
 white_noise(x, y; σ=1) = σ * randn(ComplexF64)
 
@@ -208,6 +205,10 @@ white_noise(x, y; σ=1) = σ * randn(ComplexF64)
     random_phase(domain::AbstractDomain; value=1e-6, ndims=1)
 
 Generate random noise from randomly phased spectral modes, with zonal and streamer-modes removed.
+
+```math
+\\hat{u} = A\\exp(i\\theta), \\quad \\theta \\sim \\mathcal{U}[0,2\\pi)
+```
 
 # Arguments
 - `value`: Amplitude of the spectral coefficients (default `1e-6`)
@@ -233,7 +234,7 @@ The density nₖ is related to the potential ϕₖ via a fixed cross-phase θ:
 ```
 and the vorticity is derived from the potential via:
 ```math
-\\hat{\\Omega} = \\nabla_\\perp^2 \\hat{\\phi}
+\\Omega = \\nabla_\\perp^2 \\phi
 ```
 
 # Arguments

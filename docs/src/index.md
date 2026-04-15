@@ -45,7 +45,8 @@ Or, equivalently, via the `Pkg` API:
 ```julia
 julia> import Pkg; Pkg.add("Advectra")
 ```
--->
+
+!-->
 
 ## Contributing
 
