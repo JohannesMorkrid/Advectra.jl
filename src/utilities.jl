@@ -183,7 +183,7 @@ exponential_x(x, y; κ=1) = exp(-κ * x)
 
 ```math
 f(x,y) = \\begin{cases}
-            1 - y^2, & |y| \\le 1 \\
+            1 - y^2, & |y| \\le 1 \\\\
             0, & |y| > 1
          \\end{cases}
 ```
