@@ -207,7 +207,7 @@ white_noise(x, y; σ=1) = σ * randn(ComplexF64)
 Generate random noise from randomly phased spectral modes, with zonal and streamer-modes removed.
 
 ```math
-\\hat{u} = A\\exp(i\\theta), \\quad \\theta \\sim \\mathcal{U}[0,2\\pi)
+\\hat{u} = A\\exp(i\\theta), \\quad \\theta \\sim U[0,2\\pi)
 ```
 
 # Arguments
