@@ -13,7 +13,7 @@ broadcastable_ic(::Function) = Val(true)
     @nobroadcast f(domain::AbstractDomain; kwargs...) = ...
 
 Mark a domain-level initial condition function as non-broadcastable for use with
-`initial_condition`. By default, `initial_condition` broadcasts `f` pointwise over
+[`initial_condition`](@ref). By default, [`initial_condition`](@ref) broadcasts `f` pointwise over
 the grid; this macro overrides that behaviour so the domain is passed to `f` instead.
 
 Internally, this expands to:
