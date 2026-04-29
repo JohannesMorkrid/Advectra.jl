@@ -77,11 +77,11 @@ applied to all slices of `state`. Defaults to `first` (i.e. the first slice).
   # Poloidal centroid of temperature
   centroid(state, prob, time; field=(n, Ω, T) -> T, dims=:poloidal)
 
-  # Radial centroid of density × temperature, with velocity tracking
+  # Radial centroid of pressure, with velocity tracking
   centroid(state, prob, time, memory; field=(n, Ω, T) -> n .* T)
 ```
 """
-function centroid(state, prob, time, memory::Dict=Dict(); field=field = (n, args...) -> n,
+function centroid(state, prob, time, memory::Dict=Dict(); field = (n, args...) -> n,
                   dims::Symbol=:radial)
     slices = eachslice(state; dims=ndims(state))
     f = field(slices...)
