@@ -96,7 +96,7 @@ end
 function isolated_temperature_blob(domain::AbstractDomain, ::Val{:log}; ndims=3, kwargs...)
     u0 = initial_condition(log_gaussian, domain; kwargs...)
     ic = zeros(size(u0)..., ndims)
-    ic[:, :, 1] .= 1.0
+    ic[:, :, 1] .= 0.0
     ic[:, :, 3] .= u0
     return ic
 end
