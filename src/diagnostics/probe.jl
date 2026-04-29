@@ -248,6 +248,28 @@ function build_diagnostic(::Val{:probe_vorticity}; domain, positions,
                            interpolation=interpolation)
 end
 
+# --------------------------------------- Temperature ----------------------------------------
+
+"""
+    probe_temperature(state, prob, time; positions, interpolation=nothing)
+  
+  Probe the temperature field, Ω, at the given `positions`. 
+"""
+function probe_temperature(state, prob, time, positions; interpolation=nothing)
+    Ω = selectdim(state, ndims(prob.domain) + 1, 3)
+    probe_field(Ω, prob.domain, positions, interpolation)
+end
+
+function build_diagnostic(::Val{:probe_temperature}; domain, positions,
+                          interpolation=nothing, kwargs...)
+    build_probe_diagnostic(; name="Temperature probe",
+                           method=probe_temperature,
+                           positions=positions,
+                           domain=domain,
+                           quantities="temperature",
+                           interpolation=interpolation)
+end
+
 # --------------------------------------- Potential ----------------------------------------
 
 """

@@ -930,12 +930,12 @@ end
   Checks if the first entry in `u` is `NaN`, if so a breakdown occured and an error is thrown.
 """
 assert_no_nan(state::AbstractArray, time) =
-    if isnan(state[1])
+    if isnan(state[end])
         error("Breakdown occured at t=$time")
     end
 
 function assert_no_nan(state::AbstractGPUArray, time)
-    @allowscalar isnan(state[1]) ? error("Breakdown occured at t=$time") : nothing
+    @allowscalar isnan(state[end]) ? error("Breakdown occured at t=$time") : nothing
 end
 
 """

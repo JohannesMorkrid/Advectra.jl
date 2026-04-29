@@ -274,14 +274,18 @@ logarithmic scale. Additional keyword arguments are passed to the underlying
     isolated_blob(domain, Val(density); kwargs...)
 end
 
-function isolated_blob(domain::AbstractDomain, ::Val{:lin}; kwargs...)
+function isolated_blob(domain::AbstractDomain, ::Val{:lin}; ndims=2, kwargs...)
     u0 = initial_condition(gaussian, domain; kwargs...)
-    cat(u0, zero(u0); dims=3)
+    ic = zeros(size(u0)..., ndims)
+    ic[:, :, 1] .= u0
+    return ic
 end
 
-function isolated_blob(domain::AbstractDomain, ::Val{:log}; kwargs...)
+function isolated_blob(domain::AbstractDomain, ::Val{:log}; ndims=2, kwargs...)
     u0 = initial_condition(log_gaussian, domain; kwargs...)
-    cat(u0, zero(u0); dims=3)
+    ic = zeros(size(u0)..., ndims)
+    ic[:, :, 1] .= u0
+    return ic
 end
 
 # ---------------------- Inverse functions / transforms ------------------------------------
@@ -344,7 +348,7 @@ end
 """
 frequencies(state)
 
-  Displays a heatmap of the mode-amplitudes in logscale.
+  Displays a heatmap of the mode-amplitudes using log scale.
 """
 frequencies(state::AbstractArray) = heatmap(log10.(abs.(state)); title="Frequencies")
 
