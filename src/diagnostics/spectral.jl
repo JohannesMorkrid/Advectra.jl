@@ -169,7 +169,7 @@ end
 function kinetic_energy_spectrum(state_hat::AbstractArray, prob, time,
                                  spectrum=Val{:radial})
     @unpack domain = prob
-    Ω_hat = selectdim(state_hat, ndims(state_hat), 1)
+    Ω_hat = selectdim(state_hat, ndims(state_hat), 2)
     energy_spectrum(abs2.(Ω_hat), prob, time, spectrum)
 end
 
