@@ -11,15 +11,14 @@ end
 
 function _parsevals_theorem(coeffs::AbstractArray, domain::Domain,
                             real_transform::Val{true}; compute_density=true)
-    integral = @views (2 * sum(abs2.(coeffs)) .- sum(abs2.(coeffs))) *
-                      (length(domain) * differential_area(domain)) /
-                      (spectral_length(domain))
+    integral = @views (2 * sum(abs2.(coeffs)) .- sum(abs2.(coeffs[1,:]))) *
+                      differential_area(domain)) / length(domain)
     return compute_density ? integral / area(domain) : integral
 end
 
 function _parsevals_theorem(coeffs::AbstractArray, domain::Domain,
                             real_transform::Val{false}; compute_density=true)
-    integral = @views (sum(abs2.(coeffs))) * differential_area(domain)
+    integral = @views (sum(abs2.(coeffs))) * differential_area(domain) / length(domain)
     return compute_density ? integral / area(domain) : integral
 end
 
@@ -38,10 +37,10 @@ end
 # ------------------------------- Potential Energy Integral --------------------------------
 
 # P(t) = ∫dx 1/2n^2
-function potential_energy_integral(state, prob, time; quadrature=nothing)
+function potential_energy_integral(state_hat, prob, time; quadrature=nothing)
     @unpack domain = prob
-    n = selectdim(state, ndims(domain) + 1, 1)
-    parsevals_theorem(n, domain) / 2
+    n_hat = selectdim(state_hat, ndims(domain) + 1, 1)
+    parsevals_theorem(n_hat, domain) / 2
 end
 
 function build_diagnostic(::Val{:potential_energy_integral}; kwargs...)
@@ -56,14 +55,14 @@ end
 # -------------------------------- Kinetic Energy Integral ---------------------------------
 
 # K(t) = ∫1/2(∇_⟂Φ)^2 = ∫dx1/2 U_E^2
-function kinetic_energy_integral(state, prob, time; quadrature=nothing)
+function kinetic_energy_integral(state_hat, prob, time; quadrature=nothing)
     @unpack domain, operators = prob
     @unpack solve_phi, diff_x, diff_y = operators
-    slices = eachslice(state; dims=ndims(state))
-    n = slices[1]
-    Ω = slices[2]
-    ϕ = solve_phi(n, Ω)
-    parsevals_theorem(diff_x(ϕ), domain) / 2 + parsevals_theorem(diff_y(ϕ), domain) / 2
+    slices = eachslice(state_hat; dims=ndims(state_hat))
+    n_hat = slices[1]
+    Ω_hat = slices[2]
+    ϕ_hat = solve_phi(n_hat, Ω_hat)
+    parsevals_theorem(diff_x(ϕ_hat), domain) / 2 + parsevals_theorem(diff_y(ϕ_hat), domain) / 2
 end
 
 function requires_operator(::Val{:kinetic_energy_integral}; kwargs...)
@@ -95,10 +94,10 @@ end
 # ------------------------------- Enstropy Energy Integral ---------------------------------
 
 # U(t) = ∫1/2(∇_⟂^2Φ)^2 = ∫dx1/2 Ω^2
-function enstropy_energy_integral(state, prob, time; quadrature=nothing)
+function enstropy_energy_integral(state_hat, prob, time; quadrature=nothing)
     @unpack domain = prob
-    Ω = selectdim(state, ndims(domain) + 1, 2)
-    parsevals_theorem(Ω, domain) / 2
+    Ω_hat = selectdim(state_hat, ndims(domain) + 1, 2)
+    parsevals_theorem(Ω_hat, domain) / 2
 end
 
 function build_diagnostic(::Val{:enstropy_energy_integral}; kwargs...)
@@ -113,16 +112,16 @@ end
 # ---------------------------- Resistive Dissipation Integral ------------------------------
 
 # Γ_c(t) = C∫(n-ϕ)^2
-function resistive_dissipation_integral(state, prob, time; adiabaticity_symbol=:C,
+function resistive_dissipation_integral(state_hat, prob, time; adiabaticity_symbol=:C,
                                         quadrature=nothing)
     @unpack domain, operators, p = prob
     @unpack solve_phi, quadratic_term = operators
     C = getfield(p, adiabaticity_symbol)
-    slices = eachslice(state; dims=ndims(state))
-    n = slices[1]
-    Ω = slices[2]
-    h = n .- solve_phi(n, Ω)
-    return C * parsevals_theorem(h, domain)
+    slices = eachslice(state_hat; dims=ndims(state_hat))
+    n_hat = slices[1]
+    Ω_hat = slices[2]
+    h_hat = n_hat .- solve_phi(n_hat, Ω_hat)
+    return C * parsevals_theorem(h_hat, domain)
 end
 
 function requires_operator(::Val{:resistive_dissipation_integral}; kwargs...)
