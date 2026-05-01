@@ -288,6 +288,41 @@ function isolated_blob(domain::AbstractDomain, ::Val{:log}; ndims=2, kwargs...)
     return ic
 end
 
+"""
+    isolated_temperature_blob(domain::AbstractDomain; density::Symbol=:lin, ndims=2, kwargs...)
+
+Generate a 2D isolated Gaussian temperature blob with unity density and remaining fields set to zero.
+
+The `density` keyword controls whether the blob is represented on a linear or
+logarithmic scale. Additional keyword arguments are passed to the underlying
+[`gaussian`](@ref) or [`log_gaussian`](@ref) function.
+
+# Arguments
+- `density`: Scale of the blob, either `:lin` (default) or `:log`
+- `ndims`: Number of fields (default `2`)
+- `kwargs...`: Passed to [`gaussian`](@ref) or [`log_gaussian`](@ref), typically `A`, `B`, `l`
+"""
+@nobroadcast function isolated_temperature_blob(domain::AbstractDomain; density::Symbol=:lin, ndims=3,
+                                   kwargs...)
+    isolated_temperature_blob(domain, Val(density); ndims, kwargs...)
+end
+
+function isolated_temperature_blob(domain::AbstractDomain, ::Val{:lin}; ndims=3, kwargs...)
+    u0 = initial_condition(gaussian, domain; kwargs...)
+    ic = zeros(size(u0)..., ndims)
+    ic[:, :, 1] .= 1.0
+    ic[:, :, 3] .= u0
+    return ic
+end
+
+function isolated_temperature_blob(domain::AbstractDomain, ::Val{:log}; ndims=3, kwargs...)
+    u0 = initial_condition(log_gaussian, domain; kwargs...)
+    ic = zeros(size(u0)..., ndims)
+    ic[:, :, 1] .= 0.0
+    ic[:, :, 3] .= u0
+    return ic
+end
+
 # ---------------------- Inverse functions / transforms ------------------------------------
 
 expTransform(u::AbstractArray) = [exp.(u[:, :, 1]);;; u[:, :, 2]]
