@@ -36,7 +36,7 @@ struct ElwiseOperator{T<:AbstractArray} <: LinearOperator{T}
 end
 
 # Out-of-place operator
-@views (op::ElwiseOperator)(u::AbstractArray) = op.coeffs .* u
+(op::ElwiseOperator)(u::AbstractArray) = op.coeffs .* u
 
 # In-place operator
 (op::ElwiseOperator)(du::AbstractArray, u::AbstractArray) = du .= op.coeffs .* u
@@ -53,7 +53,7 @@ struct MatrixOperator{T<:AbstractArray} <: LinearOperator{T}
 end
 
 # Out-of-place operator # TODO figure out what to do here
-@views @inline (op::MatrixOperator)(u::AbstractArray) = op.coeffs * u
+(op::MatrixOperator)(u::AbstractArray) = op.coeffs * u
 
 # --------------------------------- Non-Linear Operators -----------------------------------
 

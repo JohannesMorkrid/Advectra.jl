@@ -110,7 +110,7 @@ function parse_diagnostic_expr(expr)
             end
         end
 
-        return :(DiagnosticRecipe($method; $(kwargs...)))
+        return :(DiagnosticRecipe($(QuoteNode(method)); $(kwargs...)))
     elseif expr.head == :(=)
         error("Aliases, alias = method(kwargs...), is not supported for diagnostics.")
     else
@@ -121,7 +121,7 @@ end
 # ---------------------------- Include Implemented Diagnostics -----------------------------
 
 include("CFL.jl")
-include("COM.jl")
+include("centroids.jl")
 include("display.jl")
 include("energy_integrals.jl")
 include("fluxes.jl")
