@@ -48,7 +48,7 @@ export spectral_solve
 include("utilities.jl")
 export initial_condition, @nobroadcast, gaussian, log_gaussian, gaussian_x, gaussian_y,
        sinusoidal, sinusoidal_x, sinusoidal_y, quadratic_y, exponential_x, white_noise,
-       random_phase, random_crossphased, isolated_blob, frequencies, remove_zonal_modes!,
+       random_phase, random_crossphased, isolated_blob, isolated_temperature_blob, frequencies, remove_zonal_modes!,
        remove_streamer_modes!, remove_asymmetric_modes!, remove_nothing, add_constant!,
        add_constant, send_mail, logspace
 end
