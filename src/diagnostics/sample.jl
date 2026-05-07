@@ -117,7 +117,7 @@ function sample_velocity(state_hat, prob, time; kwargs...)
     return cat(vx, vy; dims=3)
 end
 
-function requires_operator(::Val{:sample_poloidal_velocity}; kwargs...)
+function requires_operator(::Val{:sample_velocity}; kwargs...)
     [OperatorRecipe(:diff_x), OperatorRecipe(:diff_y), OperatorRecipe(:solve_phi)]
 end
 
