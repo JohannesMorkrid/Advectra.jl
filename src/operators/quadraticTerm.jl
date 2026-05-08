@@ -30,7 +30,7 @@ struct QuadraticTerm{TP<:AbstractTransformPlans,P<:AbstractArray,SP<:AbstractArr
         V = similar(U)
 
         # Calculate correct conversion coefficent
-        dealiasing_coefficient = precision(length(up) / spectral_length(domain))
+        dealiasing_coefficient = precision(length(U) / length(domain))
 
         new{typeof(transforms),typeof(U),typeof(up),
             typeof(dealiasing_coefficient)}(transforms, U, V, up, vp,
