@@ -514,6 +514,11 @@ end
 # Edge case
 compute_storage_need(N_steps, stride, sample::Nothing; context="") = 0
 
+function compute_storage_need(N_steps::Int, stride::Int, sample::Tuple; context="")
+    stride < 1 ? throw(ArgumentError(context * "stride must be ≥ 1, got $stride")) : nothing
+    (cld(N_steps, stride) + 1) * length(sample) * sizeof(eltype(sample))
+end
+
 """
     validate_stride(N_steps::Int, stride::Int; context="")
   
