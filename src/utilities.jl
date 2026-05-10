@@ -217,7 +217,7 @@ Generate random noise from randomly phased spectral modes, with zonal and stream
 @nobroadcast function random_phase(domain::AbstractDomain; value=10^-6, ndims=1,
                                    include_zonal=false, include_streamer=false)
     θ = 2π * rand(spectral_size(domain)..., (ndims == 1 ? () : (ndims,))...)
-    u_hat = value .* exp.(im * θ)
+    u_hat = value .* exp.(im * θ) |> domain.MemoryType
     include_zonal || (selectdim(u_hat, 1, 1) .= 0.0)
     include_streamer || (selectdim(u_hat, 2, 1) .= 0.0)
     spectral_transform(u_hat, bwd(domain))
