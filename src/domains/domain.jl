@@ -74,7 +74,8 @@ Domain(Nx:128, Ny:256, Lx:1.0, Ly:2.0, real_transform:true, dealiased:true, Memo
 - `y`: spatial position of each point along the y-axis. Uniformly distributed by default.
 - `kx`: wave vector components along x-axis.
 - `ky`: wave vector components along y-axis.
-    
+- `transforms`: collection of fwd and bwd transform methods.
+
 !!! warning
     Restricted to 2D for the time being.
 """
@@ -151,12 +152,9 @@ function prepare_frequencies(Nx, Ny, dx, dy, MemoryType, precision, real_transfo
     return kx, ky
 end
 
-# TODO move to fftutilites.jl [#22](https://github.com/JohannesMorkrid/HasegawaWakatani.jl/issues/22)
 """
     prepare_transform_plans(Nx, Ny, use_cuda, precision, real_transform)
-    prepare_transform_plans(utmp, ::Type{Domain}, ::Val{false})
-    prepare_transform_plans(utmp, ::Type{Domain}, ::Val{true})
-
+    
 Prepare transform plan by preparing a domain using dispatching to call the right \
 construction method.
 """
@@ -166,34 +164,51 @@ function prepare_transform_plans(Nx, Ny, MemoryType, precision, real_transform)
     utmp = zeros(precision, Ny, Nx) |> MemoryType
 
     # Dispatch on Domain and real_transform
-    prepare_transform_plans(utmp, Domain, Val(real_transform))
+    construct_transform_plans(utmp, Domain, Val(real_transform))
 end
 
-function prepare_transform_plans(utmp, ::Type{Domain}, ::Val{true})
+"""
+    construct_transform_plans(utmp, ::Type{Domain}, ::Val{false})
+    construct_transform_plans(utmp, ::Type{Domain}, ::Val{true})
+
+Constructs transform plans based on Domain type and if Real or Complex valued fields.
+"""
+function construct_transform_plans(utmp, ::Type{Domain}, ::Val{true})
     FT = plan_rfft(utmp)
     iFT = plan_irfft(FT * utmp, first(size(utmp)))
     return rFFTPlans(FT, iFT)
 end
 
-function prepare_transform_plans(utmp, ::Type{Domain}, ::Val{false})
+function construct_transform_plans(utmp, ::Type{Domain}, ::Val{false})
     FFTPlans(plan_fft(utmp), plan_ifft(utmp))
 end
 
 # ----------------------------------- Interface --------------------------------------------
 
-# TODO make use of domain interface functions [#23](https://github.com/JohannesMorkrid/HasegawaWakatani.jl/issues/23)
 function Base.show(io::IO, m::MIME"text/plain", domain::AbstractDomain)
     typename = nameof(typeof(domain))
 
+    # Assumes 2D domain
+    labels = reverse(get_labels(domain))
+    Ns = reverse(size(domain))
+    Ls = reverse(lengths(domain))
+    points = reverse(first.(get_points(domain)))
+
+    print(io, typename, "(")
+    print(io, join("N" .* string.(labels) .* ":" .* string.(Ns), ", "))
+    print(io, ", ")
+    print(io, join("L" .* string.(labels) .* ":" .* string.(Ls), ", "))
+
     if get(io, :compact, false)
-        print(io, typename, "(", domain.Nx, ",", domain.Ny, ",", domain.Lx, ",", domain.Ly,
-              ")")
-    else
-        print(io, typename, "(Nx:", domain.Nx, ", Ny:", domain.Ny, ", Lx:", domain.Lx,
-              ", Ly:", domain.Ly, ", real_transform:", domain.real_transform,
-              ", dealiased:", domain.dealiased, ", MemoryType:", memory_type(domain), ")")
-        if first(domain.x) != 0.0 || first(domain.y) != 0.0
-            print(io, " offset by (", first(domain.x), ", ", first(domain.y), ")")
+        print(io, ")")
+    else # Prints additional kwargs
+        kwargs = domain_kwargs(domain)
+        for (key, value) in pairs(kwargs)
+            print(io, ", ", key, ":", value)
+        end
+        print(io, ", MemoryType:", memory_type(domain), ")")
+        if any(points .!= 0)
+            print(io, " offset by (", join(points, ", "), ")")
         end
     end
 end
@@ -220,6 +235,13 @@ Return a tuple of points along each axis, default (y, x).
 get_points(domain::Domain) = (domain.y, domain.x)
 
 """
+    get_label(domain::Domain)
+
+Return a tuple of labels (Symbols) for each axis, default (:y, :x).
+"""
+get_labels(domain::Domain) = (:y, :x)
+
+"""
     wave_vectors(domain::Domain)
 
 Return a tuple of wave vectors for each axis, default (ky, kx).
@@ -231,8 +253,8 @@ wave_vectors(domain::Domain) = (domain.ky, domain.kx)
 
 Return the domain specific keyword arguments, depending on the type of AbstractDomain.
 """
-domain_kwargs(domain::Domain) = (real_transform=domain.real_transform,
-                                 dealiased=dealiased)
+domain_kwargs(domain::Domain) = (; real_transform=domain.real_transform,
+                                 dealiased=domain.dealiased)
 
 """
     spectral_size(domain::AbstractDomain)
@@ -272,4 +294,4 @@ memory_type(domain::AbstractDomain) = domain.MemoryType{domain.precision}
 # Overloading
 Base.size(domain::AbstractDomain) = (domain.Ny, domain.Nx)
 Base.length(domain::AbstractDomain) = prod(size(domain))
-Base.ndims(domain) = length(size(domain))
+Base.ndims(domain::AbstractDomain) = length(size(domain))

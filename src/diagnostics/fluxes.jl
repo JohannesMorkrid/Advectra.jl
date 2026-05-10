@@ -42,15 +42,21 @@ end
 
 """
     radial_flux(state_hat, prob, time)
-
-  Computes Γ_0(t) = 1/(L_xL_y)∫_0^L_x∫_0^L_y nv_x dydx, does not take into acount dealiasing.
+  Computes 
+  ```math
+    \\Gamma_0(t) = \\frac{1}{L_xL_y}\\int_0^{L_x}\\int_0^{L_y} nv_x dydx,
+  ```
+  does not take into acount dealiasing.
 """
 function radial_flux(state_hat::AbstractGPUArray, prob, time; quadrature=nothing)
     @unpack domain, operators = prob
     @unpack solve_phi, diff_y = operators
-    n_hat, Ω_hat = eachslice(state_hat; dims=3)
+    slices = eachslice(state_hat; dims=ndims(state_hat))
+    n_hat = slices[1]
+    Ω_hat = slices[2]
     # Compute dϕdy 
-    dϕ_hat = -diff_y(solve_phi(Ω_hat))
+    dϕ_hat = -solve_phi(n_hat, Ω_hat)
+    diff_y(dϕ_hat, dϕ_hat)
 
     # Compute flux average
     Γ = physical_flux(n_hat, dϕ_hat, domain)
@@ -77,9 +83,12 @@ end
 function poloidal_flux(state_hat::AbstractGPUArray, prob, time; quadrature=nothing)
     @unpack domain, operators = prob
     @unpack solve_phi, diff_x = operators
-    n_hat, Ω_hat = eachslice(state_hat; dims=3)
+    slices = eachslice(state_hat; dims=ndims(state_hat))
+    n_hat = slices[1]
+    Ω_hat = slices[2]
     # Compute dϕdy 
-    dϕ_hat = diff_x(solve_phi(Ω_hat))
+    dϕ_hat = solve_phi(n_hat, Ω_hat)
+    diff_x(dϕ_hat, dϕ_hat)
 
     # Compute flux average
     Γ = physical_flux(n_hat, dϕ_hat, domain)

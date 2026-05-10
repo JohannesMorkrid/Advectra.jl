@@ -2,13 +2,13 @@
 #                                   CFL Diagnostic Tests                                    
 # ------------------------------------------------------------------------------------------
 
-using HasegawaWakatani
+using Advectra
 using CUDA
-import HasegawaWakatani: build_diagnostic, build_operator
+import Advectra: build_diagnostic, build_operator
 
 # Minimal construction
 domain = Domain(256, 256; MemoryType=CuArray)
-ic = initial_condition(random_crossphased, domain) |> HasegawaWakatani.memory_type(domain)
+ic = initial_condition(random_crossphased, domain) |> Advectra.memory_type(domain)
 dt = 0.0001
 
 # Emulates SpectralODEProblem
@@ -20,19 +20,19 @@ prob = (; domain=domain,
 
 ic_hat = spectral_transform(ic, get_fwd(domain))
 
-velocities = HasegawaWakatani.compute_velocity(ic_hat, prob, 0.0)
-velocities = HasegawaWakatani.compute_velocity(ic, prob, 0.0; velocity=:burger)
+velocities = Advectra.compute_velocity(ic_hat, prob, 0.0)
+velocities = Advectra.compute_velocity(ic, prob, 0.0; velocity=:burger)
 
-CFLs = HasegawaWakatani.compute_cfl(velocities, prob, 0.0, Val(:x))
-CFLs = HasegawaWakatani.compute_cfl(velocities, prob, 0.0, Val(:y))
-CFLs = HasegawaWakatani.compute_cfl(velocities, prob, 0.0, Val(:both))
-CFLs = HasegawaWakatani.compute_cfl(velocities, prob, 0.0, Val(:magnitude))
-CFLs = HasegawaWakatani.compute_cfl(velocities, prob, 0.0, Val(:something))
+CFLs = Advectra.compute_cfl(velocities, prob, 0.0, Val(:x))
+CFLs = Advectra.compute_cfl(velocities, prob, 0.0, Val(:y))
+CFLs = Advectra.compute_cfl(velocities, prob, 0.0, Val(:both))
+CFLs = Advectra.compute_cfl(velocities, prob, 0.0, Val(:magnitude))
+CFLs = Advectra.compute_cfl(velocities, prob, 0.0, Val(:something))
 
-HasegawaWakatani.cfl(ic_hat, prob, 0.00023, Val(:ExB), Val(:x));
-HasegawaWakatani.cfl(ic_hat, prob, 0.00023, Val(:ExB), Val(:y));
-HasegawaWakatani.cfl(ic_hat, prob, 0.00023, Val(:ExB), Val(:both); silent=false);
-HasegawaWakatani.cfl(ic_hat, prob, 0.00023, Val(:ExB), Val(:magnitude); silent=true)
+Advectra.cfl(ic_hat, prob, 0.00023, Val(:ExB), Val(:x));
+Advectra.cfl(ic_hat, prob, 0.00023, Val(:ExB), Val(:y));
+Advectra.cfl(ic_hat, prob, 0.00023, Val(:ExB), Val(:both); silent=false);
+Advectra.cfl(ic_hat, prob, 0.00023, Val(:ExB), Val(:magnitude); silent=true)
 
 cfl = build_diagnostic(Val(:cfl); velocity=:burger, component=:magnitude, silent=false)
 cfl(ic, prob, 0.0)

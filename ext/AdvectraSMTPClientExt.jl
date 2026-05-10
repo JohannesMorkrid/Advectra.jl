@@ -1,9 +1,9 @@
-module HasegawaWakataniSMTPClientExt
+module AdvectraSMTPClientExt
 
 using SMTPClient
 
 # Effectively overload by specializing the function call
-import HasegawaWakatani: send_mail
+import Advectra: send_mail
 function send_mail(subject::AbstractString; attachment="")
     # Dates.format(now(), RFC1123Format)
     url = "smtps://smtp.gmail.com:465"
@@ -19,11 +19,11 @@ function send_mail(subject::AbstractString; attachment="")
     else
         body = get_body(to, from, subject, mime_msg)
     end
-    opt = SendOptions(isSSL=true, username=ENV["MAIL_USERNAME"], passwd=ENV["MAIL_PASSWORD"])
+    opt = SendOptions(; isSSL=true, username=ENV["MAIL_USERNAME"],
+                      passwd=ENV["MAIL_PASSWORD"])
     args = (url, rcpt, from, body, opt) # Have to wrap the args to remove "problem"
     resp = send(args...)
 end
-
 
 """
     create_env_file(path="", username="mail@provider.com", app_password="password",
@@ -34,8 +34,7 @@ end
   multiple recipiants.
 """
 function create_env_file(path="", username="mail@provider.com", app_password="password",
-    recipiant="<mail@provider.com>")
-
+                         recipiant="<mail@provider.com>")
     filecontent = """
     # Make sure .gitignore works properly as to not share your password!
     MAIL_USERNAME = $username
@@ -70,7 +69,7 @@ function load_env_file!(file_path::AbstractString=@__DIR__)
         startswith(line, "#") && continue
 
         if occursin("=", line)
-            key, value = split(line, "=", limit=2)
+            key, value = split(line, "="; limit=2)
             ENV[strip(key)] = strip(value)
         else
             @warn "Skipping malformed line in $path: $line"
@@ -79,8 +78,6 @@ function load_env_file!(file_path::AbstractString=@__DIR__)
 end
 
 # Append data into EnvDict
-function __init__()
-    load_env_file!()
-end
+__init__() = load_env_file!()
 
 end

@@ -58,7 +58,7 @@ function probe_field(field::AbstractArray, domain::AbstractDomain,
                      interpolation::Nothing=nothing)
     data = field[indices]
     # Return either the one point, or the array
-    length(data) == 1 ? data[1] : data
+    length(data) == 1 ? only(Array(data)) : data
 end
 
 # GPU optimized in-place without interpolation
@@ -70,7 +70,7 @@ function probe_field!(out::T, field::T, indices::T) where {T<:AbstractGPUArray}
     return
 end
 
-# TODO fix SubArray issue [#26](https://github.com/JohannesMorkrid/HasegawaWakatani.jl/issues/26)
+# TODO fix SubArray issue [#26](https://github.com/JohannesMorkrid/Advectra.jl/issues/26)
 # GPU "optimized" out-of place without interpolation
 # function probe_field(field::AbstractGPUArray, domain::AbstractDomain,
 #                      indices::AbstractGPUArray{<:Integer},
@@ -248,6 +248,28 @@ function build_diagnostic(::Val{:probe_vorticity}; domain, positions,
                            interpolation=interpolation)
 end
 
+# --------------------------------------- Temperature ----------------------------------------
+
+"""
+    probe_temperature(state, prob, time; positions, interpolation=nothing)
+  
+  Probe the temperature field, Ω, at the given `positions`. 
+"""
+function probe_temperature(state, prob, time, positions; interpolation=nothing)
+    Ω = selectdim(state, ndims(prob.domain) + 1, 3)
+    probe_field(Ω, prob.domain, positions, interpolation)
+end
+
+function build_diagnostic(::Val{:probe_temperature}; domain, positions,
+                          interpolation=nothing, kwargs...)
+    build_probe_diagnostic(; name="Temperature probe",
+                           method=probe_temperature,
+                           positions=positions,
+                           domain=domain,
+                           quantities="temperature",
+                           interpolation=interpolation)
+end
+
 # --------------------------------------- Potential ----------------------------------------
 
 """
@@ -255,10 +277,13 @@ end
   
   Probe the potential field, ϕ, at the given `positions`. 
 """
-function probe_potential(state, prob, time, positions; interpolation=nothing)
+function probe_potential(state_hat, prob, time, positions; interpolation=nothing)
     @unpack domain, operators = prob
     @unpack solve_phi = operators
-    ϕ = get_bwd(domain) * solve_phi(selectdim(state, ndims(domain) + 1, 2))
+    slices = eachslice(state_hat; dims=ndims(state_hat))
+    n_hat = slices[1]
+    Ω_hat = slices[2]
+    ϕ = get_bwd(domain) * solve_phi(n_hat, Ω_hat)
     probe_field(ϕ, domain, positions, interpolation)
 end
 
@@ -285,7 +310,10 @@ end
 function probe_radial_velocity(state, prob, time, positions; interpolation=nothing)
     @unpack domain, operators = prob
     @unpack solve_phi, diff_y = operators
-    ϕ_hat = solve_phi(selectdim(state, ndims(domain) + 1, 2))
+    slices = eachslice(state_hat; dims=ndims(state_hat))
+    n_hat = slices[1]
+    Ω_hat = slices[2]
+    ϕ_hat = solve_phi(n_hat, Ω_hat)
     v_x_hat = -diff_y(ϕ_hat)
     v_x = get_bwd(domain) * v_x_hat
     probe_field(v_x, domain, positions, interpolation)
@@ -314,22 +342,22 @@ end
   Probe the density (n), vorticity (Ω), potential (ϕ), radial velocity field (vᵣ) and 
   radial flux (Γ), at the given `positions` all "at once". 
 """
-function probe_all(state, prob, time, positions; interpolation=nothing)
+function probe_all(state_hat, prob, time, positions; interpolation=nothing)
     @unpack domain, operators = prob
     @unpack solve_phi, diff_y = operators
 
-    dim = ndims(domain) + 1
-
     # Calculate spectral fields
-    Ω_hat = selectdim(state, dim, 2)
-    ϕ_hat = solve_phi(Ω_hat)
+    slices = eachslice(state_hat; dims=ndims(state_hat))
+    n_hat = slices[1]
+    Ω_hat = slices[2]
+    ϕ_hat = solve_phi(n_hat, Ω_hat)
     v_x_hat = -diff_y(ϕ_hat)
 
     # Cache for transformation
     cache = zeros(size(domain)) |> memory_type(prob.domain)
 
     # Transform to physical space and probe fields
-    n = mul!(cache, get_bwd(domain), selectdim(state, dim, 1))
+    n = mul!(cache, get_bwd(domain), n_hat)
     n_p = probe_field(n, domain, positions, interpolation)
     Ω = mul!(cache, get_bwd(domain), Ω_hat)
     Ω_p = probe_field(Ω, domain, positions, interpolation)

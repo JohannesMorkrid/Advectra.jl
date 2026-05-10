@@ -49,7 +49,8 @@ end
   `Array` where first column/entry is the position and the second is the velocity.
 """
 function radial_COM(state, prob, time, memory::Dict=Dict(); field_idx::Int=1)
-    density = selectdim(state, ndims(prob.domain) + 1, field_idx)
+    slices = eachslice(state; dims=ndims(state))
+    density = slices[field_idx]
     X_COM = compute_radial_COM_position(density, prob, time)
 
     if !isempty(memory)

@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+title: "Advectra.jl"
+message: "If you use this package, please cite it using the metadata from this file."
+type: software
+
+authors:
+  - family-names: Mørkrid
+    given-names: Johannes
+    orcid: "https://orcid.org/0009-0001-4222-9001"
+
+version: "1.0.0"
+license: MIT
+repository-code: "https://github.com/JohannesMorkrid/Advectra.jl"
+url: "https://github.com/JohannesMorkrid/Advectra.jl"
+date-released: "2026-03-03"
+abstract: Bi-Spectral Advection Diffusion Solver.
+
+preferred-citation:
+  type: article
+  authors:
+    - family-names: Mørkrid
+      given-names: Johannes
+      orcid: "https://orcid.org/0009-0001-4222-9001"
+  title: "Numerical simulations of sheath-interchange turbulence at the boundary of magnetically confined plasmas"
+  journal: "Nasjonalt vitenarkiv"
+  url: "https://hdl.handle.net/10037/37597"
+  year: 2025

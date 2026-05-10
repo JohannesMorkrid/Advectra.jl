@@ -128,6 +128,7 @@ include("fluxes.jl")
 include("probe.jl")
 include("profiles.jl")
 include("progress.jl")
+include("sample.jl")
 include("spectral.jl")
 
 # ---------------------------------- Default Diagnostics -----------------------------------

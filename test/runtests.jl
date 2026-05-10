@@ -1,8 +1,12 @@
-using HasegawaWakatani
+using Advectra
 using Test
 
-@testset "HasegawaWakatani.jl" begin
+@testset "Advectra" begin
     # Write your tests here.
+    include("domain_tests.jl")
+    include("display_tests.jl")
+    include("progressbar_test.jl")
+    include("operator_tests.jl")
 end
 
-# Test MMS1, MSS2, MSS3, perform_step!, get_cache, unpack_cache
+# Test MMS1, MSS2, MSS3, perform_step!, get_cache, unpack_cache#

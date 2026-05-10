@@ -47,7 +47,8 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,
                                 remove_modes::Function=remove_nothing, kwargs...)
 
         # If no linear operator given, assume there is non and match signature
-        isinplace(NonLinear) ? L(du, u, d, p, t) = (du .= zero(u)) : L(u, d, p, t) = zero(u)
+        isinplace(NonLinear) isa Val{true} ? L(du, u, operators, p, t) = (du .= zero(u)) :
+        L(u, operators, p, t) = zero(u)
 
         SpectralODEProblem(L, NonLinear, u0, domain, tspan; p=p, dt=dt,
                            remove_modes=remove_modes, kwargs...)
@@ -99,23 +100,17 @@ function prepare_functions(Linear::Function, NonLinear::Function, operators::Nam
         L(du, u, p, t) = Linear(du, u, operators, p, t)
         N(du, u, p, t) = NonLinear(du, u, operators, p, t)
     else
-        L(u, p, t) = Linear(u, operators, p, t)
-        N(u, p, t) = NonLinear(u, operators, p, t)
+        L = (u, p, t) -> Linear(u, operators, p, t)
+        N = (u, p, t) -> NonLinear(u, operators, p, t)
     end
     return L, N
 end
 
-# TODO make it more generalized
 """
 """
 function prepare_initial_condition(u0, domain::Domain)
-    # Transform to MemoryType
-    u0 = u0 |> domain.MemoryType{domain.precision}
-
-    # Used for normal Fourier transform
-    eltype(fwd(domain)) <: Complex ? u0 = complex(u0) : nothing
-
-    return u0
+    # Transform to the correct MemoryType for physical space
+    u0 |> domain.MemoryType{eltype(fwd(domain))}
 end
 
 # -------------------------- Spectral Coefficent Initialization ----------------------------
@@ -193,7 +188,7 @@ function ensure!(cache, recipe, domain, problem_kwargs)
     cache[recipe] = build_operator(Val(operator), domain; kwargs...)
 end
 
-# TODO fix aliases method issue [#27](https://github.com/JohannesMorkrid/HasegawaWakatani.jl/issues/27)
+# TODO fix aliases method issue [#27](https://github.com/JohannesMorkrid/Advectra.jl/issues/27)
 function add_aliases!(operators, aliases, cache)
     #for alias in aliases
     #    # Get last, as thats whats being aliases
@@ -279,6 +274,9 @@ function isinplace(f::Function)
         - Out-of-place: `$f(u, d, p, t)` (4 arguments, returns a new value).
     However, no methods of `$f` match these signatures.")
 end
+
+get_linear_operator(prob::SpectralODEProblem) = prob.L.Linear
+get_nonlinear_operator(prob::SpectralODEProblem) = prob.N.NonLinear
 
 function Base.show(io::IO, m::MIME"text/plain", prob::SpectralODEProblem)
     print(io, nameof(typeof(prob)), "(", nameof(prob.L), ",", nameof(prob.N), ";dt=",

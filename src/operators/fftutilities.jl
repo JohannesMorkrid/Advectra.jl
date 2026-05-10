@@ -95,7 +95,7 @@ function Base.show(io::IO, transformplans::AbstractTransformPlans)
     else
         println(io, typename)
         println(io, "  forward: ", fwd)
-        println(io, "  backward :", bwd)
+        println(io, "  backward:", bwd)
     end
 end
 

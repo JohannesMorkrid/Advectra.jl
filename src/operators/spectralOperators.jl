@@ -36,7 +36,10 @@ struct ElwiseOperator{T<:AbstractArray} <: LinearOperator{T}
 end
 
 # Out-of-place operator
-@views @inline (op::ElwiseOperator)(u::AbstractArray) = op.coeffs .* u
+@views (op::ElwiseOperator)(u::AbstractArray) = op.coeffs .* u
+
+# In-place operator
+(op::ElwiseOperator)(du::AbstractArray, u::AbstractArray) = du .= op.coeffs .* u
 
 # To be able to use @. without applying LinearOperator to array element
 import Base.Broadcast: broadcasted
@@ -52,21 +55,20 @@ end
 # Out-of-place operator # TODO figure out what to do here
 @views @inline (op::MatrixOperator)(u::AbstractArray) = op.coeffs * u
 
-include("spatialDerivatives.jl")
-
 # --------------------------------- Non-Linear Operators -----------------------------------
 
 # Abstract type that all NonLinear operators inherit from
 abstract type NonLinearOperator <: SpectralOperator end
 
 include("quadraticTerm.jl")
+include("spatialDerivatives.jl") # Technically both linear and non-linear
 include("poissonBracket.jl")
 
 # ---------------------------------------- Others ------------------------------------------
 
-include("solvePhi.jl")
 include("spectralFunctions.jl")
-#include("sources.jl")
+include("solvePhi.jl")
+include("sources.jl")
 
 # ------------------------------------ Operator Recipe -------------------------------------
 
@@ -92,6 +94,10 @@ end
 # end
 
 # ------------------------------------- Constructors ---------------------------------------
+
+function build_operator(op::Symbol, domain::AbstractDomain; kwargs...)
+    build_operator(Val(op), domain; kwargs...)
+end
 
 # TODO add @op for each operator
 
@@ -122,7 +128,8 @@ function get_operator_recipes(operators::Symbol)
                 OperatorRecipe(:spectral_log),
                 OperatorRecipe(:spectral_exp),
                 OperatorRecipe(:spectral_expm1),
-                OperatorRecipe(:reciprocal)]
+                OperatorRecipe(:reciprocal),
+                OperatorRecipe(:grad_dot_grad)]
     elseif operators == :none
         OperatorRecipe[]
     else
@@ -153,12 +160,3 @@ end
 #     #-> spectral_operators = (:∂x=ElwiseOperator, :∂y=ElwiseOperator, :laplacian=ElwiseOperator, :poisson_bracket=PoissonBracket)
 
 # end
-
-# diff_x = ∂x = Dx
-# diff_y = ∂y  = Dy
-# diff_xx = ∂xx = Dxx = ∂x² = (∂x^2)
-# diff_yy = ∂yy = Dyy = ∂y² (∂y^2)
-# diff_xn = ∂xn = Dxn (∂x^n)
-# diff_yn = ∂yn = Dyn (∂y^n)
-# laplacian = diffusion = Δ
-# hyper_laplacian = hyper_diffusion (Δ^p)

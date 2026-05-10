@@ -21,8 +21,7 @@ struct QuadraticTerm{TP<:AbstractTransformPlans,P<:AbstractArray,SP<:AbstractArr
         # Allocate the physical array, using zero-padding if dealiasing is enabled
         utmp = zeros(precision, domain.dealiased ? pad_size(Ns) : Ns) |> memory_type(domain)
 
-        # TODO Utilizing the transform plans method defined in fftutilities?
-        transforms = prepare_transform_plans(utmp, Domain, Val(domain.real_transform))
+        transforms = construct_transform_plans(utmp, Domain, Val(domain.real_transform))
 
         # Allocate data for pseudo spectral schemes
         up = fwd(transforms) * zero(utmp)
@@ -31,9 +30,7 @@ struct QuadraticTerm{TP<:AbstractTransformPlans,P<:AbstractArray,SP<:AbstractArr
         V = similar(U)
 
         # Calculate correct conversion coefficent
-        dealiasing_coefficient = precision(length(up) / spectral_length(domain))
-
-        println(dealiasing_coefficient)
+        dealiasing_coefficient = precision(length(U) / length(domain))
 
         new{typeof(transforms),typeof(U),typeof(up),
             typeof(dealiasing_coefficient)}(transforms, U, V, up, vp,
@@ -56,20 +53,22 @@ build_operator(::Val{:quadratic_term}, domain::Domain; kwargs...) = QuadraticTer
 #------------------------------ Quadratic terms interface ----------------------------------
 
 # In-place operator
-# TODO figure out where the cache should end up!
 @inline function (quadratic_term::QuadraticTerm)(out::T, u::T,
                                                  v::T) where {T<:AbstractGPUArray}
+    @assert size(u)==size(v) "u and v must have the same size"
     @unpack transforms, U, V, up, vp, padded, dealiasing_coefficient = quadratic_term
 
     mul!(U, bwd(transforms), padded ? pad!(up, u, typeof(transforms)) : u)
     mul!(V, bwd(transforms), padded ? pad!(vp, v, typeof(transforms)) : v)
     @. U *= V
+
     mul!(padded ? up : out, fwd(transforms), U)
-    padded ? dealiasing_coefficient * unpad!(out, up, typeof(transforms)) : out
+    padded ? out .= dealiasing_coefficient .* unpad!(out, up, typeof(transforms)) : out
 end
 
-@inline function (quadratic_term::QuadraticTerm)(out::T, u::T,
-                                                 v::T) where {T<:AbstractArray}
+@inline function (quadratic_term::QuadraticTerm)(out::AbstractArray, u::AbstractArray,
+                                                 v::AbstractArray)
+    @assert size(u)==size(v) "u and v must have the same size"
     @unpack transforms, U, V, up, vp, padded, dealiasing_coefficient = quadratic_term
 
     # Spawn threads to perform mul! in parallel
@@ -85,16 +84,15 @@ end
         U[i] *= V[i]
     end
     mul!(padded ? up : out, fwd(transforms), U)
-    padded ? dealiasing_coefficient * unpad!(out, up, typeof(transforms)) : out
+    padded ? out .= dealiasing_coefficient .* unpad!(out, up, typeof(transforms)) : out
 end
 
-# Out-of-place operator # TODO double check that allocation is needed?
-(op::QuadraticTerm)(u::T, v::T) where {T<:AbstractArray} = op(similar(u), u, v)
+# Out-of-place operator
+(op::QuadraticTerm)(u::AbstractArray, v::AbstractArray) = op(similar(u), u, v)
 
 # ------------------------------------------ Helpers ---------------------------------------
 
 # Specialized for 2D arrays
-# TODO optimize for GPU
 @inline function pad!(up::DU, u::U,
                       ::Type{<:FFTPlans}) where {T,DU<:AbstractArray{T},U<:AbstractArray{T}}
     up .= zero.(up)
@@ -102,8 +100,8 @@ end
 
     Nxl = div(Nx, 2, RoundUp)
     Nxu = div(Nx, 2, RoundDown)
-    Nyl = div(Nx, 2, RoundUp)
-    Nyu = div(Nx, 2, RoundDown)
+    Nyl = div(Ny, 2, RoundUp)
+    Nyu = div(Ny, 2, RoundDown)
 
     @views @inbounds up[1:Nyl, 1:Nxl] .= u[1:Nyl, 1:Nxl] # Lower left
     @views @inbounds up[1:Nyl, (end-Nxu+1):end] .= u[1:Nyl, (end-Nxu+1):end] # Lower right
@@ -113,7 +111,6 @@ end
     return up
 end
 
-# TODO optimize for GPU
 @inline function pad!(up::DU, u::U,
                       ::Type{<:rFFTPlans}) where {T,DU<:AbstractArray{T},
                                                   U<:AbstractArray{T}}
@@ -128,16 +125,15 @@ end
     return up
 end
 
-# TODO optimize for GPU
 @inline function unpad!(u::DU, up::U,
                         ::Type{<:FFTPlans}) where {T,DU<:AbstractArray{T},
                                                    U<:AbstractArray{T}}
     Ny, Nx = size(u)
 
-    Nyl = div(Nx, 2, RoundUp)
-    Nyu = div(Nx, 2, RoundDown)
     Nxl = div(Nx, 2, RoundUp)
     Nxu = div(Nx, 2, RoundDown)
+    Nyl = div(Ny, 2, RoundUp)
+    Nyu = div(Ny, 2, RoundDown)
 
     @views @inbounds u[1:Nyl, 1:Nxl] .= up[1:Nyl, 1:Nxl] # Lower left
     @views @inbounds u[1:Nyl, (end-Nxu+1):end] .= up[1:Nyl, (end-Nxu+1):end] # Lower right
@@ -147,7 +143,6 @@ end
     return u
 end
 
-# TODO optimize for GPU
 @inline function unpad!(u::DU, up::U,
                         ::Type{<:rFFTPlans}) where {T,DU<:AbstractArray{T},
                                                     U<:AbstractArray{T}}
@@ -160,7 +155,3 @@ end
     @views @inbounds u[1:Ny, (end-Nxu+1):end] .= up[1:Ny, (end-Nxu+1):end] # Lower right
     return u
 end
-
-# TODO size(u) != size(v) ? error("u and v must have the same size") : nothing
-
-# TODO add option to compute quadratic_term from spectral to physical

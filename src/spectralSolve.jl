@@ -3,10 +3,11 @@
 # First step is stored during initilization of output
 function spectral_solve(prob::SOP, scheme::SA=MSS3(),
                         output::O=Output(prob; store_hdf=false);
-                        resume::Bool=false) where {SOP<:SpectralODEProblem,
+                        debug::Bool=false,) where {SOP<:SpectralODEProblem,
                                                    SA<:AbstractODEAlgorithm,O<:Output}
+
     # Initialize cache and tracking
-    cache, t, step = initialize_solve(prob, scheme, output, resume)
+    cache, t, step = initialize_solve(prob, scheme, output)
 
     # Time step
     dt = prob.dt
@@ -29,8 +30,8 @@ function spectral_solve(prob::SOP, scheme::SA=MSS3(),
             handle_output!(output, step, cache.u, prob, t)
         end
     catch error
-        # Interupt the error, so that the code does not halt
-        showerror(stdout, error)
+        # Interupt the error, so that the code does not halt when not in debug mode
+        debug ? rethrow(error) : showerror(stdout, error)
     end
 
     # Store the cache to be able to resume simulations
@@ -45,11 +46,10 @@ function spectral_solve(prob::SOP, scheme::SA=MSS3(),
     return output
 end
 
-function initialize_solve(prob::SOP, scheme::SA, output::O,
-                          resume::Bool) where {
-                                               SOP<:SpectralODEProblem,
-                                               SA<:AbstractODEAlgorithm,O<:Output}
-    if resume && output.store_hdf && haskey(output.simulation, "checkpoint")
+function initialize_solve(prob::SOP, scheme::SA,
+                          output::O) where {SOP<:SpectralODEProblem,
+                                            SA<:AbstractODEAlgorithm,O<:Output}
+    if output.resume && output.store_hdf && haskey(output.simulation, "checkpoint")
         cache = restore_checkpoint(output.simulation, prob, scheme)
         t = read(output.simulation, "checkpoint/time")
         step = read(output.simulation, "checkpoint/step")

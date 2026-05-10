@@ -14,9 +14,7 @@
   - `ky`: gets modes along the `ky` axis in spectral space.
   - `both`: gets all the modes in spectral space.
   - `kx`: gets modes along the `kx=ky` line in spectral space. 
-"""
-
-# Interface
+""" # Interface
 function get_modes(state_hat::AbstractArray, prob, time; axis::Symbol=:both)
     get_modes(state_hat, prob, time, Val(axis))
 end
@@ -33,7 +31,7 @@ get_modes(state_hat::AbstractArray, prob, time, ::Val{:both}) = @views state_hat
 
 function get_modes(state_hat::AbstractArray, prob, time, ::Val{:diag})
     if ndims(state_hat) > 2
-        return diag.(eachslice(state_hat; dims=ndims(prob.domain) + 1))
+        return stack(diag.(eachslice(state_hat; dims=ndims(prob.domain) + 1)))
     elseif ndims(state_hat) == 2
         return diag(state_hat)
     else

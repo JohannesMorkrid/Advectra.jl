@@ -1,92 +1,69 @@
 ## Run all (alt+enter)
-include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
+using Advectra
+using CUDA
 
-## Run alternative linear stability test
-domain = Domain(256, 256, 100, 100, dealiased=true)
-ic = initial_condition_linear_stability(domain, 1e-6)
+# Run alternative linear stability test
+domain = Domain(256, 256; Lx=48, Ly=48, MemoryType=CuArray)
+ic = initial_condition(random_crossphased, domain; value=1e-3)
 
-# Linear operator (May not be static actually)
-function L(u, d, p, t)
-    D_η = p["D_n"] * laplacian(u, d) #.- p["g"]*diff_y(u,d)
-    D_Ω = p["D_Omega"] * laplacian(u, d)
-    [D_η;;; D_Ω]
+# Linear operator
+function Linear(du, u, operators, p, t)
+    @unpack laplacian, diff_x, diff_y = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack ν, μ, ζ = p
+    dη .= ν * laplacian(η) - ζ * diff_y(η) - 2 * ν * κ * diff_x(η)
+    dΩ .= μ * laplacian(Ω)
 end
 
 # Non-linear operator
-function N(u, d, p, t)
-    η = u[:, :, 1]
-    Ω = u[:, :, 2]
-    ϕ = solve_phi(Ω, d)
-    dη = -(1 - p["g"]) * diff_y(ϕ, d)
-    dη -= p["g"] * diff_y(η, d)
-    #dη .+= p["D_n"] - p["sigma_n"]
-    dη -= p["sigma_n"] * ϕ
-    dη -= 2 * p["D_n"] * p["kappa"] * diff_x(η, d)
-    dΩ = -p["g"] * diff_y(η, d)
-    dΩ += p["sigma_Omega"] * ϕ
-    return [dη;;; dΩ]
+function NonLinear(du, u, operators, p, t)
+    @unpack solve_phi, diff_x, diff_y = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack ζ, σ, κ, ν = p
+    ϕ = solve_phi(Ω)
+    dη .= -(κ - ζ) * diff_y(ϕ) + σ * ϕ
+    dΩ .= -ζ * diff_y(η) + σ * ϕ
 end
 
 # Parameters
-parameters = Dict(
-    "D_Omega" => 1e-2,
-    "D_n" => 1e-2,
-    "g" => 1e-3,
-    "sigma_Omega" => 1e-5,
-    "sigma_n" => 1e-5,
-    "kappa" => sqrt(1e-3)
-)
+κ = 1e-2
+parameters = (κ=κ, ζ=1e-3, σ=1e-3, ν=1e-4, μ=1e-4)
 
 # Time interval
-t_span = [0, 500]
-
-# The problem
-prob = SpectralODEProblem(L, N, ic, domain, t_span, p=parameters, dt=1e-3)
+tspan = [0.0, 10000.0]
 
 # Array of diagnostics want
-diagnostics = [
-    #ProbeDensityDiagnostic([(5, 0), (8.5, 0), (11.25, 0), (14.375, 0)], N=10),
-    #RadialCOMDiagnostic(),
-    ProgressDiagnostic(1000),
-    #CFLDiagnostic(),
-    #RadialCFLDiagnostic(100),
-    PlotDensityDiagnostic(10000),
-    #GetModeDiagnostic(100),
-    GetLogModeDiagnostic(100),
+diagnostics = @diagnostics [
+    progress(; stride=1000),
+    cfl(; stride=100, component=:radial, silent=true),
+    plot_density(; stride=10000),
+    get_modes(; stride=100),
+    get_log_modes(; stride=100, axis=:ky)
 ]
 
+# The problem
+prob = SpectralODEProblem(Linear, NonLinear, ic, domain, tspan; p=parameters, dt=1e-1,
+                          diagnostics=diagnostics)
+
 # The output
-output = Output(prob, 1001, diagnostics) #progressDiagnostic
+output_file_name = joinpath(@__DIR__, "output", "linear-stability.h5")
+output = Output(prob; filename=output_file_name, simulation_name=:parameters,
+                storage_limit="100 MB", resume=true)
 
-## Solve and plot
-sol = spectral_solve(prob, MSS3(), output)
+# Solve
+sol = spectral_solve(prob, MSS3(), output;)
 
-## Save data
-using JLD
-save("linearstability.jld", "data", sol.u)
+## ----------------------------------- Mode Andalysis --------------------------------------
 
-## Analyze data
-data = Array(reshape(reduce(hcat, sol.u), size(sol.u[1])..., length(sol.u)))
-data = Matrix{Number}(data')
-
-# Unreliable atm
-#data = Array(reshape(reduce(hcat, sol.u), size(sol.u[1])..., length(sol.u)))
-kappa = sqrt(parameters["sigma_n"] / parameters["D_n"])
-n0 = initial_condition(exponential_background, domain, kappa=kappa)
-data_hat = zeros(ComplexF64, size(sol.u[1])..., length(sol.u))
-for i in eachindex(sol.u)
-    data_hat[:, :, 1, i] = fft(sol.u[i][:, :, 1])#fft(n0.*sol.u[i][:, :, 1])
-    data_hat[:, :, 2, i] = fft(sol.u[i][:, :, 2])
-end
-
-plot(log.(abs.(data_hat[60, 60, 1, :])))
-plot(domain.x, n0[1, :] + 1e4 * sol.u[end][1, :, 1])
-
-plot(log.(abs.(data_hat[14, 14, 1, :])))
-
-cd(relpath(@__DIR__, pwd()))
-fid = h5open("output/linear-stability test.h5", "r")
-simulation = fid[keys(fid)[1]]
-
-simulation["Log mode diagnostic/data"][:, :, :]
-simulation["Log mode diagnostic/t"][:]
+using LaTeXStrings
+using Plots
+log_modes = sol.simulation["Log modes/data"]
+t = sol.simulation["Log modes/t"][:]
+gamma = (log_modes[:, :, end] - log_modes[:, :, end-1]) / (diff(t)[end])
+@unpack ζ, κ, σ, ν = parameters
+w0 = sqrt(ζ * κ) * sqrt(1 - ζ / κ)
+plot(gamma[:, 1] / w0; xaxis=:log, xlabel=L"k_y = k_x", ylabel=L"\gamma/\gamma_0",
+     ylim=[-2, 1])
+vline!([(σ / ν)^(1 / 4)])

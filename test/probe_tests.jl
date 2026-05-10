@@ -2,12 +2,12 @@
 #                                        Probe Test                                         
 # ------------------------------------------------------------------------------------------
 
-using HasegawaWakatani
+using Advectra
 using CUDA
-import HasegawaWakatani: build_diagnostic
+import Advectra: build_diagnostic
 
 domain = Domain(256, 256; MemoryType=CuArray)
-ic = initial_condition(isolated_blob, domain) |> HasegawaWakatani.memory_type(domain)
+ic = initial_condition(isolated_blob, domain) |> Advectra.memory_type(domain)
 
 probe = build_diagnostic(Val(:probe_all); domain=domain,
                          positions=[(0, 0), (0.1, 0), (0.4, 0)])

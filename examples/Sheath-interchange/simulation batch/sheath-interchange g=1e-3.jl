@@ -1,74 +1,67 @@
 ## Run all (alt+enter)
-include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
+using Advectra
+using CUDA
 
-## Run scheme test for Burgers equation
-domain = Domain(128, 128, 100, 100, dealiased=true)
-ic = initial_condition_linear_stability(domain, 1e-3)
+domain = Domain(128, 128; Lx=100, Ly=100, MemoryType=CuArray)
+ic = initial_condition(random_crossphased, domain; value=1e-3)
 
 # Linear operator
-function L(u, d, p, t)
-    D_n = p["D_n"] .* laplacian(u, d)
-    D_Ω = p["D_Ω"] .* laplacian(u, d)
-    [D_n;;; D_Ω]
+function Linear!(du, u, operators, p, t)
+    @unpack laplacian = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack ν, μ = p
+    dη .= ν .* laplacian(η)
+    dΩ .= μ .* laplacian(Ω)
 end
 
 # Non-linear operator, linearized
-function N(u, d, p, t)
-    n = @view u[:, :, 1]
-    Ω = @view u[:, :, 2]
-    ϕ = solve_phi(Ω, d)
+function NonLinear!(du, u, operators, p, t)
+    @unpack solve_phi, poisson_bracket, diff_y = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack g, σ, κ = p
+    ϕ = solve_phi(Ω)
 
-    dn = -poisson_bracket(ϕ, n, d)
-    dn .-= (p["kappa"] - p["g"]) * diff_y(ϕ, d)
-    dn .-= p["g"] * diff_y(n, d)
-    dn .-= p["sigma_n"] * n
-
-    dΩ = -poisson_bracket(ϕ, Ω, d)
-    dΩ .-= p["g"] * diff_y(n, d)
-    dΩ .+= p["sigma_Ω"] * ϕ
-    return [dn;;; dΩ]
+    dη .= poisson_bracket(η, ϕ) - (κ - g) * diff_y(ϕ) - g * diff_y(η) + σ * ϕ
+    dΩ .= poisson_bracket(Ω, ϕ) - g * diff_y(η) + σ * ϕ
 end
 
 # Parameters
-parameters = Dict(
-    "D_Ω" => 1e-2,
-    "D_n" => 1e-2,
-    "g" => 1e-3,
-    "sigma_Ω" => 1e-3,
-    "sigma_n" => 1e-3,
-    "kappa" => sqrt(1e-1)
-)
+parameters = (ν=1e-2, μ=1e-2, g=1e-3, σ=1e-3, κ=sqrt(1e-1))
 
-t_span = [0, 5_000_000]
-
-prob = SpectralODEProblem(L, N, ic, domain, t_span, p=parameters, dt=1e-1)
+# Time interval
+tspan = [0, 5_000_000]
 
 # Diagnostics
-diagnostics = [
-    ProgressDiagnostic(1000),
-    ProbeAllDiagnostic([(x, 0) for x in LinRange(-40, 50, 10)], N=10),
-    #PlotDensityDiagnostic(5000),
-    RadialFluxDiagnostic(50),
-    KineticEnergyDiagnostic(10),
-    PotentialEnergyDiagnostic(50),
-    EnstropyEnergyDiagnostic(50),
-    GetLogModeDiagnostic(50, :ky),
-    CFLDiagnostic(500),
-    RadialPotentialEnergySpectraDiagnostic(500),
-    PoloidalPotentialEnergySpectraDiagnostic(500),
-    RadialKineticEnergySpectraDiagnostic(500),
-    PoloidalKineticEnergySpectraDiagnostic(500),
+diagnostics = @diagnostics [
+    progress(; stride=1000),
+    probe_all(; positions=[(x, 0) for x in LinRange(-50, 40, 10)], stride=100),
+    plot_density(; stride=5000),
+    radial_flux(; stride=50),
+    kinetic_energy_integral(; stride=50),
+    potential_energy_integral(; stride=50),
+    enstropy_energy_integral(; stride=50),
+    get_log_modes(; stride=50, axis=:diag),
+    cfl(; stride=500)
+    #potential_energy_spectrum(; spectrum=:radial, stride=500),
+    #potential_energy_spectrum(; spectrum=:poloidal, stride=500),
+    #kinetic_energy_spectrum(; spectrum=:radial, stride=500),
+    #kinetic_energy_spectrum(; spectrum=:poloidal, stride=500)
 ]
 
-# Output
-cd(relpath(@__DIR__, pwd()))
-output = Output(prob, 1001, diagnostics, "../output/sheath-interchange g=1e-3.h5",
-    simulation_name="10 probes", store_locally=false)
+# Collection of specifications defining the problem to be solved
+prob = SpectralODEProblem(Linear!, NonLinear!, ic, domain, tspan; p=parameters, dt=1e-1,
+                          operators=:all, diagnostics=diagnostics)
 
-FFTW.set_num_threads(16)
+# Output
+output_file_name = joinpath(@__DIR__, "../output", "sheath-interchange long time series.h5")
+output = Output(prob; filename=output_file_name, simulation_name=:parameters,
+                storage_limit="1 GB", store_locally=false, resume=true)
 
 ## Solve and plot
-sol = spectral_solve(prob, MSS3(), output)
+sol = spectral_solve(prob, MSS3(), output;)
 
+using SMTPClient
 send_mail("g=1e-3 finnished, go analyse the data and see if it has different PDF!")
 close(output)

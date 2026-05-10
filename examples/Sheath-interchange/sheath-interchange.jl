@@ -1,101 +1,75 @@
 ## Run all (alt+enter)
-include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
+using Advectra
+using CUDA
 
-## Run scheme test for Burgers equation
-domain = Domain(128, 128, 100, 100, dealiased=true)
-ic = initial_condition_linear_stability(domain, 1e-3)
-
-plot(ic[:, :, 1])
+domain = Domain(256, 256; Lx=48, Ly=48, MemoryType=CuArray, precision=Float64)
+ic = initial_condition(random_crossphased, domain; value=1e-3)
 
 # Linear operator
-function L(u, d, p, t)
-    D_n = p["D_n"] .* laplacian(u, d)
-    D_Ω = p["D_Ω"] .* laplacian(u, d)
-    [D_n;;; D_Ω]
+function Linear!(du, u, operators, p, t)
+    @unpack laplacian = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack ν, μ = p
+    dη .= ν * laplacian(η)
+    dΩ .= μ * laplacian(Ω)
 end
 
-# Non-linear operator, linearized
-function N(u, d, p, t)
-    n = @view u[:, :, 1]
-    Ω = @view u[:, :, 2]
-    ϕ = solve_phi(Ω, d)
+# Non-linear operator, linearized potential and diffusion
+function NonLinear!(du, u, operators, p, t)
+    @unpack solve_phi, poisson_bracket, diff_y, quadratic_term = operators
+    η, Ω = eachslice(u; dims=3)
+    dη, dΩ = eachslice(du; dims=3)
+    @unpack g, σ = p
+    ϕ = solve_phi(Ω)
 
-    dn = -poisson_bracket(ϕ, n, d)
-    dn .-= (p["kappa"] - p["g"]) * diff_y(ϕ, d)
-    dn .-= p["g"] * diff_y(n, d)
-    dn .-= p["sigma_n"] * n
-
-    dΩ = -poisson_bracket(ϕ, Ω, d)
-    dΩ .-= p["g"] * diff_y(n, d)
-    dΩ .+= p["sigma_Ω"] * ϕ
-    return [dn;;; dΩ]
+    dη .= poisson_bracket(η, ϕ) - (1 - g) * diff_y(ϕ) - g * diff_y(η) + σ * ϕ
+    dΩ .= poisson_bracket(Ω, ϕ) - g * diff_y(η) + σ * ϕ
 end
-
-# # Non-linear operator, fully non-linear
-# function N(u, d, p, t)
-#     n = u[:, :, 1]
-#     W = u[:, :, 2]
-#     phi = solve_phi(W, d)
-#     dn = -poisson_bracket(phi, n, d)
-#     dn += p["g"] * quadratic_term(n, diff_y(n, d), d)
-#     dn += -p["g"] * diff_y(n, d)
-#     dn += -p["sigma"] * n
-#     dW = -poisson_bracket(phi, W, d)
-#     #dW += -p["g"] * diff_y(spectral_log(n, d), d)
-#     dW += -p["g"] * quadratic_term(reciprocal(n, d), diff_y(n, d), d)
-#     dW += n
-#     dW += -quadratic_term(n, spectral_exp(phi, d), d)
-#     [dn;;; dW]
-# end
 
 # Parameters
-parameters = Dict(
-    "D_Ω" => 1e-2,
-    "D_n" => 1e-2,
-    "g" => 1e-3,
-    "sigma_Ω" => 1e-3,
-    "sigma_n" => 1e-3,
-    "kappa" => sqrt(1e-1)
-)
+parameters = (κ=sqrt(1e1), g=1e-1, σ=1e-1, ν=1e-2, μ=1e-2)
 
-t_span = [0, 5000000]
-
-prob = SpectralODEProblem(L, N, ic, domain, t_span, p=parameters, dt=1e-1)
+# Time interval
+tspan = [0.0, 5000.0]
 
 # Diagnostics
-diagnostics = [
-    ProgressDiagnostic(1000),
-    ProbeAllDiagnostic([(x, 0) for x in LinRange(-40, 50, 10)], N=100),
-    #PlotDensityDiagnostic(50),
-    RadialFluxDiagnostic(50),
-    KineticEnergyDiagnostic(50),
-    PotentialEnergyDiagnostic(50),
-    EnstropyEnergyDiagnostic(50),
-    GetLogModeDiagnostic(50, :ky),
-    CFLDiagnostic(50),
-    #RadialPotentialEnergySpectraDiagnostic(50),
-    #PoloidalPotentialEnergySpectraDiagnostic(50),
-    #RadialKineticEnergySpectraDiagnostic(50),
-    #PoloidalKineticEnergySpectraDiagnostic(50),
+diagnostics = @diagnostics [
+    progress(; stride=1000),
+    probe_all(; positions=[(x, 0) for x in LinRange(-10, 10, 10)], stride=100),
+    plot_density(; stride=1000),
+    radial_flux(; stride=50),
+    kinetic_energy_integral(; stride=50),
+    potential_energy_integral(; stride=50),
+    enstropy_energy_integral(; stride=50),
+    get_log_modes(; stride=50, axis=:diag),
+    cfl(; stride=5000),
+    sample_density(; storage_limit="1 GB"),
+    sample_vorticity(; storage_limit="1 GB")
+    #sample_potential(; storage_limit="1 GB")
+    #potential_energy_spectrum(; spectrum=:radial, stride=50),
+    #potential_energy_spectrum(; spectrum=:poloidal, stride=50),
+    #kinetic_energy_spectrum(; spectrum=:radial, stride=50)
+    #kinetic_energy_spectrum(; spectrum=:poloidal, stride=50)
 ]
 
-# Output
-cd(relpath(@__DIR__, pwd()))
-output = Output(prob, 1001, diagnostics, "output/sheath-interchange long time series.h5",
-    simulation_name=:parameters, store_locally=false)
+# Collection of specifications defining the problem to be solved
+prob = SpectralODEProblem(Linear!, NonLinear!, ic, domain, tspan; p=parameters, dt=1e-3,
+                          operators=:all, diagnostics=diagnostics)
 
-FFTW.set_num_threads(16)
+# Inverse transform
+inverse_transformation!(u) = @. u[:, :, 1] = exp(1e-2 * u[:, :, 1]) - 1
+
+# Output
+output_file_name = joinpath(@__DIR__, "output", "sheath-interchange_example.h5")
+output = Output(prob; filename=output_file_name, simulation_name=:parameters,
+                #physical_transform=inverse_transformation!,
+                storage_limit="1 GB",
+                store_locally=false, resume=true)
 
 ## Solve and plot
-sol = spectral_solve(prob, MSS3(), output)
+sol = spectral_solve(prob, MSS3(), output;)
 
-data = sol.simulation["fields"][:, :, :, :]
-t = sol.simulation["t"][:]
-default(legend=false)
-anim = @animate for i in axes(data, 4)
-    heatmap(data[:, :, 1, i], aspect_ratio=:equal, xaxis=L"x", yaxis=L"y", title=L"n(t=" * "$(round(t[i], digits=0)))")
-end
-gif(anim, "long timeseries.gif", fps=20)
-
-send_mail("Long time series simulation finnished!", attachment="benkadda.gif")
+using SMTPClient
+send_mail("Simulation finnished!"; attachment="benkadda.gif")
 close(output)

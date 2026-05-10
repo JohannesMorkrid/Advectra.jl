@@ -5,7 +5,7 @@
 function plot_field(domain, field, time=-1; field_name="", digits=2, kwargs...)
     ending = (time == -1 ? ")" : ", t = $(round(time, digits=digits)))")
     title = field_name * "(x, y" * ending
-    display(heatmap(domain, field; aspect_ratio=:equal, xlabel="x", ylabel="y",
+    display(heatmap(domain, real(field); aspect_ratio=:equal, xlabel="x", ylabel="y",
                     title=title, kwargs...))
 end
 
@@ -42,13 +42,31 @@ function build_diagnostic(::Val{:plot_vorticity}; dt, kwargs...)
                kwargs=kwargs)
 end
 
+# -------------------------------------- Temperature ---------------------------------------
+
+function plot_temperature(state, prob, time; digits=2, kwargs...)
+    T = selectdim(state, ndims(prob.domain) + 1, 3) |> Array
+    plot_field(prob.domain, T, time; field_name=L"T", digits=digits, color=:jet, kwargs...)
+end
+
+function build_diagnostic(::Val{:plot_temperature}; dt, kwargs...)
+    kwargs = (; digits=ceil(Int, -log10(dt)))
+    Diagnostic(; name="Plot temperature",
+               method=plot_temperature,
+               metadata="Display temperature",
+               stores_data=false,
+               kwargs=kwargs)
+end
+
 # --------------------------------------- Potential ----------------------------------------
 
-function plot_potential(state, prob, time; kwargs...)
+function plot_potential(state_hat, prob, time; digits=2, kwargs...)
     @unpack operators, domain = prob
     @unpack solve_phi = operators
-    Ω = selectdim(state, ndims(domain) + 1, 2)
-    ϕ = bwd(domain) * solve_phi(Ω) |> Array
+    slices = eachslice(state_hat; dims=ndims(state_hat))
+    n_hat = slices[1]
+    Ω_hat = slices[2]
+    ϕ = bwd(domain) * solve_phi(n_hat, Ω_hat) |> Array
     plot_field(domain, ϕ, time; field_name=L"\phi", digits=digits, kwargs...)
 end
 
