@@ -10,9 +10,9 @@ abstract type AbstractODEProblem{isinplace} end
 
 """
     SpectralODEProblem(L::Function, N::Function, u0, domain::AbstractDomain, tspan;
-        p=NullParameters(), dt=0.01, remove_modes::Function=remove_nothing, kwargs...)
+        p=NullParameters(), dt=0.01, remove_modes::Function=remove_nothing!, kwargs...)
     SpectralODEProblem(N::Function, u0, domain::AbstractDomain, tspan;
-        p=NullParameters(), dt=0.01, remove_modes::Function=remove_nothing, kwargs...)
+        p=NullParameters(), dt=0.01, remove_modes::Function=remove_nothing!, kwargs...)
   
   Collection of data needed to specify the spectral ODE problem to be solved. The user needs
    to specify the non-linear operator `N`, with the linear operator `L` being optional and 
@@ -44,7 +44,7 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,
 
     function SpectralODEProblem(NonLinear::Function, u0, domain::AbstractDomain, tspan;
                                 p=NullParameters(), dt=0.01,
-                                remove_modes::Function=remove_nothing, kwargs...)
+                                remove_modes::Function=remove_nothing!, kwargs...)
 
         # If no linear operator given, assume there is non and match signature
         isinplace(NonLinear) isa Val{true} ? L(du, u, operators, p, t) = (du .= zero(u)) :
@@ -60,7 +60,7 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,
                                 operators::Symbol=:default,
                                 aliases::Vector{Pair{Symbol,Symbol}}=Pair{Symbol,Symbol}[],
                                 additional_operators::Vector{<:OperatorRecipe}=OperatorRecipe[],
-                                remove_modes::Function=remove_nothing,
+                                remove_modes::Function=remove_nothing!,
                                 diagnostics::Vector{<:DiagnosticRecipe}=DiagnosticRecipe[],
                                 kwargs...)
 
