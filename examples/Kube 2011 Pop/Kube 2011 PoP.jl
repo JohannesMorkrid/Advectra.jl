@@ -7,7 +7,7 @@ n0 = initial_condition(log_gaussian, domain; A=1, B=1, l=1)
 ic = cat(n0, zero(n0); dims=3)
 
 # Linear operator
-function Linear(du, u, operators, p, t)
+function Linear!(du, u, operators, p, t)
     @unpack laplacian = operators
     η, Ω = eachslice(u; dims=3)
     dη, dΩ = eachslice(du; dims=3)
@@ -18,7 +18,7 @@ function Linear(du, u, operators, p, t)
 end
 
 # Non-linear operator
-function NonLinear(du, u, operators, p, t)
+function NonLinear!(du, u, operators, p, t)
     @unpack laplacian, solve_phi, poisson_bracket, quadratic_term, diff_x,
     diff_y = operators
     η, Ω = eachslice(u; dims=3)
@@ -45,7 +45,7 @@ diagnostics = @diagnostics [
 ]
 
 # The problem
-prob = SpectralODEProblem(Linear, NonLinear, ic, domain, tspan; p=parameters, dt=1e-3,
+prob = SpectralODEProblem(Linear!, NonLinear!, ic, domain, tspan; p=parameters, dt=1e-3,
                           diagnostics=diagnostics, operators=:all)
 
 # Inverse transform

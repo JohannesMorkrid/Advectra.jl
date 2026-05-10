@@ -8,7 +8,7 @@ ic = initial_condition(random_crossphased, domain; value=1e-3)
 ic[:, :, 1] .+= 0.5
 
 # Linear operator
-function Linear(du, u, operators, p, t)
+function Linear!(du, u, operators, p, t)
     @unpack laplacian = operators
     n, Ω = eachslice(u; dims=3)
     dn, dΩ = eachslice(du; dims=3)
@@ -26,7 +26,7 @@ using Plots
 heatmap(Array(get_bwd(domain) * S); aspect_ratio=:equal)
 
 # Non-linear operator, fully non-linear
-function NonLinear(du, u, operators, p, t)
+function NonLinear!(du, u, operators, p, t)
     @unpack solve_phi, poisson_bracket, diff_y, quadratic_term = operators
     @unpack spectral_exp, spectral_expm1, spectral_log = operators
     @unpack g, σ_0 = p
@@ -61,7 +61,7 @@ diagnostics = @diagnostics [
     #kinetic_energy_spectrum(; spectrum=:poloidal, stride=50)
 ]
 
-prob = SpectralODEProblem(Linear, NonLinear, ic, domain, tspan; p=parameters, dt=1,
+prob = SpectralODEProblem(Linear!, NonLinear!, ic, domain, tspan; p=parameters, dt=1,
                           operators=:all, diagnostics=diagnostics)
 
 # Output

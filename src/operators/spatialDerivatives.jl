@@ -85,7 +85,7 @@ function build_operator(::Val{:grad_dot_grad}, domain::Domain; diff_x, diff_y,
     GradDotGradOperator(domain, diff_x, diff_y, quadratic_term)
 end
 
-function (op::GradDotGradOperator)(out::T, u::T, v::T) where {T<:AbstractArray}
+function (op::GradDotGradOperator)(out::AbstractArray, u::AbstractArray, v::AbstractArray)
     @unpack left, right, tmp, diff_x, diff_y, quadratic_term = op
 
     diff_x(left, u)
@@ -97,4 +97,4 @@ function (op::GradDotGradOperator)(out::T, u::T, v::T) where {T<:AbstractArray}
     out .+= tmp
 end
 
-(op::GradDotGradOperator)(u::T, v::T) where {T<:AbstractArray} = op(similar(u), u, v)
+(op::GradDotGradOperator)(u::AbstractArray, v::AbstractArray) = op(similar(u), u, v)

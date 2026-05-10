@@ -36,7 +36,7 @@ end
 # -------------------------------------- Main Method ---------------------------------------
 
 # In-place
-function (op::PoissonBracket)(out::T, u::T, v::T) where {T<:AbstractArray}
+function (op::PoissonBracket)(out::AbstractArray, u::AbstractArray, v::AbstractArray)
     @unpack tmp, qt_left, qt_right, diff_x, diff_y, quadratic_term = op
     diff_x(out, u)
     diff_y(tmp, v)
@@ -49,4 +49,4 @@ function (op::PoissonBracket)(out::T, u::T, v::T) where {T<:AbstractArray}
 end
 
 # Out-of-place
-(op::PoissonBracket)(u::T, v::T) where {T<:AbstractArray} = op(similar(u), u, v)
+(op::PoissonBracket)(u::AbstractArray, v::AbstractArray) = op(similar(u), u, v)

@@ -30,7 +30,7 @@ struct QuadraticTerm{TP<:AbstractTransformPlans,P<:AbstractArray,SP<:AbstractArr
         V = similar(U)
 
         # Calculate correct conversion coefficent
-        dealiasing_coefficient = precision(length(up) / spectral_length(domain))
+        dealiasing_coefficient = precision(length(U) / length(domain))
 
         new{typeof(transforms),typeof(U),typeof(up),
             typeof(dealiasing_coefficient)}(transforms, U, V, up, vp,
@@ -66,8 +66,8 @@ build_operator(::Val{:quadratic_term}, domain::Domain; kwargs...) = QuadraticTer
     padded ? out .= dealiasing_coefficient .* unpad!(out, up, typeof(transforms)) : out
 end
 
-@inline function (quadratic_term::QuadraticTerm)(out::T, u::T,
-                                                 v::T) where {T<:AbstractArray}
+@inline function (quadratic_term::QuadraticTerm)(out::AbstractArray, u::AbstractArray,
+                                                 v::AbstractArray)
     @assert size(u)==size(v) "u and v must have the same size"
     @unpack transforms, U, V, up, vp, padded, dealiasing_coefficient = quadratic_term
 
@@ -88,7 +88,7 @@ end
 end
 
 # Out-of-place operator
-(op::QuadraticTerm)(u::T, v::T) where {T<:AbstractArray} = op(similar(u), u, v)
+(op::QuadraticTerm)(u::AbstractArray, v::AbstractArray) = op(similar(u), u, v)
 
 # ------------------------------------------ Helpers ---------------------------------------
 

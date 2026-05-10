@@ -43,7 +43,7 @@ end
 # ------------------------------------- Main Methods ---------------------------------------
 
 # In-place method
-function (op::SpectralFunction)(du::T, u::T, args...; kwargs...) where {T<:AbstractArray}
+function (op::SpectralFunction)(du::AbstractArray, u::AbstractArray, args...; kwargs...)
     @unpack U, V, up, padded, transforms, dealiasing_coefficient = op.quadratic_term
     mul!(U, bwd(transforms), padded ? pad!(up, u, typeof(transforms)) : u)
     @. V = op.f(dealiasing_coefficient * U, args...; kwargs...)
@@ -52,6 +52,6 @@ function (op::SpectralFunction)(du::T, u::T, args...; kwargs...) where {T<:Abstr
 end
 
 # Out-of-place
-function (op::SpectralFunction)(u::T, args...; kwargs...) where {T<:AbstractArray}
+function (op::SpectralFunction)(u::AbstractArray, args...; kwargs...)
     op(similar(u), u, args...; kwargs...)
 end

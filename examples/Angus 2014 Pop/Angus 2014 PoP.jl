@@ -11,7 +11,7 @@ A = 2
 ic = initial_condition(isolated_blob, domain; A=A, B=1)
 
 # Linear operator
-function Linear(du, u, operators, p, t)
+function Linear!(du, u, operators, p, t)
     @unpack κ, ν = p
     θ, Ω = eachslice(u; dims=3)
     dθ, dΩ = eachslice(du; dims=3)
@@ -21,7 +21,7 @@ function Linear(du, u, operators, p, t)
 end
 
 # Non-linear operator
-function NonLinear(du, u, operators, p, t)
+function NonLinear!(du, u, operators, p, t)
     θ, Ω = eachslice(u; dims=3)
     dθ, dΩ = eachslice(du; dims=3)
     @unpack diff_y, poisson_bracket, solve_phi, grad_dot_grad = operators
@@ -56,7 +56,7 @@ diagnostics = @diagnostics [
 ]
 
 # Collection of specifications defining the problem to be solved
-prob = SpectralODEProblem(Linear, NonLinear, ic, domain, tspan; p=parameters, dt=2.5e-3,
+prob = SpectralODEProblem(Linear!, NonLinear!, ic, domain, tspan; p=parameters, dt=2.5e-3,
                           boussinesq=false, diagnostics=diagnostics, density=:linear,
                           operators=:all)
 
