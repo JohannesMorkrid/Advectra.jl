@@ -353,7 +353,7 @@ remove_streamer_modes!(u::AbstractArray, d::AbstractDomain) = selectdim(u, 2, 1)
 
 function remove_asymmetric_modes!(u::AbstractArray, domain::AbstractDomain)
     domain.Nx % 2 == 0 && (selectdim(u, 2, domain.Nx ÷ 2 + 1) .= 0.0)
-    domain.Ny % 2 == 0 && (selectdim(u, 1, domain.Nx ÷ 2 + 1) .= 0.0)
+    domain.Ny % 2 == 0 && (selectdim(u, 1, domain.Ny ÷ 2 + 1) .= 0.0)
 end
 
 const remove_nyquist_modes! = remove_asymmetric_modes!
