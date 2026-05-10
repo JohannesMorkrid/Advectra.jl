@@ -61,7 +61,7 @@ The initial condition needs to be compatible with the expected return value of t
 ## SpectralODEProblem
 The ``SpectralODEProblem`` is initiated using 
 ```
-SpectralODEProblem(L, N, u0, domain, tspan; p=Dict(), dt=0.01, remove_modes=remove_nothing, kwargs...
+SpectralODEProblem(L, N, u0, domain, tspan; p=Dict(), dt=0.01, remove_modes=remove_nothing!, kwargs...
 ```
 where ``L`` and ``N`` are the aformentioned operators, ``u0`` is the initial condition, ``domain`` is of type ``Domain`` and ``tspan`` is the time span/interval $[t_0, t_{\textrm{end}}]$. A parameter dictionary ``p`` can be passed into the operators to allow for the use of parameter values. The ``SpectralODEProblem`` also contains the method for removing certain modes, as the initial condition ``u0`` in physical space is transformed into the spectral counterpart ``u0_hat``, on which the removal of mode is also imposed. Additional key word arguments ``kwargs`` may be stored in the ``SpectralOperatorCache`` to be passed to the ``Diagnostic``'s.
 

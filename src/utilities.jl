@@ -214,11 +214,12 @@ Generate random noise from randomly phased spectral modes, with zonal and stream
 - `value`: Amplitude of the spectral coefficients (default `1e-6`)
 - `ndims`: Number of fields (default `1`)
 """
-@nobroadcast function random_phase(domain::AbstractDomain; value=10^-6, ndims=1)
-    θ = 2 * π * rand(spectral_size(domain)..., (ndims == 1 ? () : (ndims,))...)
-    u_hat = value .* exp.(im * θ)
-    u_hat[:, 1, :] .= 0
-    u_hat[1, :, :] .= 0
+@nobroadcast function random_phase(domain::AbstractDomain; value=10^-6, ndims=1,
+                                   include_zonal=false, include_streamer=false)
+    θ = 2π * rand(spectral_size(domain)..., (ndims == 1 ? () : (ndims,))...)
+    u_hat = value .* exp.(im * θ) |> domain.MemoryType
+    include_zonal || (selectdim(u_hat, 1, 1) .= 0.0)
+    include_streamer || (selectdim(u_hat, 2, 1) .= 0.0)
     spectral_transform(u_hat, bwd(domain))
 end
 
@@ -241,17 +242,17 @@ and the vorticity is derived from the potential via:
 - `value`: Amplitude of the spectral coefficients (default `1e-6`)
 - `cross_phase`: Phase offset between ϕₖ and nₖ modes (default `π/2`)
 """
-@nobroadcast function random_crossphased(domain::AbstractDomain; value=1e-6,
-                                         cross_phase=π / 2)
-    θ = 2 * π * rand(spectral_size(domain)...) |> domain.MemoryType
+@nobroadcast function random_crossphased(domain::AbstractDomain; include_streamer=false,
+                                         include_zonal=false, value=1e-6, cross_phase=π / 2)
+    θ = 2π * rand(spectral_size(domain)...) |> domain.MemoryType
     ϕ_hat = value .* exp.(im * θ)
     n_hat = ϕ_hat .* exp(im * cross_phase)
     laplacian = build_operator(:laplacian, domain)
     Ω_hat = laplacian(ϕ_hat)
     u_hat = cat(n_hat, Ω_hat; dims=3)
 
-    u_hat[1, :, :] .= 0
-    u_hat[:, 1, :] .= 0
+    include_zonal || (selectdim(u_hat, 1, 1) .= 0.0)
+    include_streamer || (selectdim(u_hat, 2, 1) .= 0.0)
 
     spectral_transform(u_hat, bwd(domain))
 end
@@ -277,14 +278,14 @@ end
 function isolated_blob(domain::AbstractDomain, ::Val{:lin}; ndims=2, kwargs...)
     u0 = initial_condition(gaussian, domain; kwargs...)
     ic = zeros(size(u0)..., ndims)
-    ic[:, :, 1] .= u0
+    selectdim(ic, 3, 1) .= u0
     return ic
 end
 
 function isolated_blob(domain::AbstractDomain, ::Val{:log}; ndims=2, kwargs...)
     u0 = initial_condition(log_gaussian, domain; kwargs...)
     ic = zeros(size(u0)..., ndims)
-    ic[:, :, 1] .= u0
+    selectdim(ic, 3, 1) .= u0
     return ic
 end
 
@@ -302,24 +303,24 @@ logarithmic scale. Additional keyword arguments are passed to the underlying
 - `ndims`: Number of fields (default `2`)
 - `kwargs...`: Passed to [`gaussian`](@ref) or [`log_gaussian`](@ref), typically `A`, `B`, `l`
 """
-@nobroadcast function isolated_temperature_blob(domain::AbstractDomain; density::Symbol=:lin, ndims=3,
-                                   kwargs...)
+@nobroadcast function isolated_temperature_blob(domain::AbstractDomain; ndims=3,
+                                                density::Symbol=:lin, kwargs...)
     isolated_temperature_blob(domain, Val(density); ndims, kwargs...)
 end
 
 function isolated_temperature_blob(domain::AbstractDomain, ::Val{:lin}; ndims=3, kwargs...)
     u0 = initial_condition(gaussian, domain; kwargs...)
     ic = zeros(size(u0)..., ndims)
-    ic[:, :, 1] .= 1.0
-    ic[:, :, 3] .= u0
+    selectdim(ic, 3, 1) .= 1.0
+    selectdim(ic, 3, 3) .= u0
     return ic
 end
 
 function isolated_temperature_blob(domain::AbstractDomain, ::Val{:log}; ndims=3, kwargs...)
     u0 = initial_condition(log_gaussian, domain; kwargs...)
     ic = zeros(size(u0)..., ndims)
-    ic[:, :, 1] .= 0.0
-    ic[:, :, 3] .= u0
+    selectdim(ic, 3, 1) .= 0.0
+    selectdim(ic, 3, 3) .= u0
     return ic
 end
 
@@ -347,26 +348,17 @@ add_constant(field::AbstractArray, val::Number) = add_constant!(similar(field), 
 
 #------------------------------ Removal of modes -------------------------------------------
 
-function remove_zonal_modes!(u::U, d::D) where {U<:AbstractArray,D<:AbstractDomain}
-    @inbounds u[1, :, :] .= 0
+remove_zonal_modes!(u::AbstractArray, d::AbstractDomain) = selectdim(u, 1, 1) .= 0.0
+remove_streamer_modes!(u::AbstractArray, d::AbstractDomain) = selectdim(u, 2, 1) .= 0.0
+
+function remove_asymmetric_modes!(u::AbstractArray, domain::AbstractDomain)
+    domain.Nx % 2 == 0 && (selectdim(u, 2, domain.Nx ÷ 2 + 1) .= 0.0)
+    domain.Ny % 2 == 0 && (selectdim(u, 1, domain.Ny ÷ 2 + 1) .= 0.0)
 end
 
-function remove_streamer_modes!(u::U, d::D) where {U<:AbstractArray,D<:AbstractDomain}
-    @inbounds u[:, 1, :] .= 0
-end
+const remove_nyquist_modes! = remove_asymmetric_modes!
 
-function remove_asymmetric_modes!(u::U,
-                                  domain::D) where {U<:AbstractArray,
-                                                    D<:AbstractDomain}
-    if domain.Nx % 2 == 0
-        @inbounds u[:, domain.Nx÷2+1, :] .= 0
-    end
-    if Ny % 2 == 0
-        @inbounds u[domain.Ny÷2+1, :, :] .= 0
-    end
-end
-
-remove_nothing(u::U, d::D) where {U<:AbstractArray,D<:AbstractDomain} = nothing
+remove_nothing!(u::AbstractArray, d::AbstractDomain) = nothing
 
 # ------------------------------------ Other -----------------------------------------------
 
@@ -381,11 +373,11 @@ function plot(domain::AbstractDomain, args...; kwargs...)
 end
 
 """
-frequencies(state)
+frequencies(field::AbstractArray)
 
   Displays a heatmap of the mode-amplitudes using log scale.
 """
-frequencies(state::AbstractArray) = heatmap(log10.(abs.(state)); title="Frequencies")
+frequencies(field::AbstractArray) = heatmap(log10.(abs.(field)); title="Frequencies")
 
 # --------------------------------------- Mailing ------------------------------------------
 
