@@ -71,6 +71,38 @@ function build_diagnostic(::Val{:get_log_modes}; axis=:diag, kwargs...)
                args=(Val(axis),))
 end
 
+# ---------------------------------- Spectral Utilities ------------------------------------
+
+_spectral_sum(f, A::AbstractArray, dims, ::FFTPlans) = sum(f, A; dims)
+
+function _spectral_sum(f, A::AbstractArray, dims::Colon, ::rFFTPlans)
+    2 * sum(f, A) - sum(f, selectdim(A, 1, 1))
+end
+
+function _spectral_sum(f, A::AbstractArray, dims, ::rFFTPlans)
+    1 in dims ? 2 .* sum(f, A; dims) .- sum(f, selectdim(A, 1, 1); dims) : sum(f, A; dims)
+end
+
+# User interface
+function spectral_sum(f, A::AbstractArray, trait::AbstractTransformPlans; dims=:)
+    _spectral_sum(f, A, dims, trait)
+end
+
+function spectral_sum(f, A::AbstractArray, domain::AbstractDomain; dims=:)
+    _spectral_sum(f, A, dims, get_transform_plans(domain))
+end
+
+# Default f = identity
+function spectral_sum(A::AbstractArray, trait::AbstractTransformPlans; dims=:)
+    spectral_sum(identity, A, trait; dims)
+end
+
+function spectral_sum(A::AbstractArray, domain::AbstractDomain; dims=:)
+    spectral_sum(identity, A, domain; dims)
+end
+
+export spectral_sum
+
 # ------------------------------------ Energy Spectra --------------------------------------
 
 """
@@ -82,16 +114,19 @@ end
   - `:radial`: radial (kx) spectrum, averaged over the poloidal direction.
   - `:poloidal`: poloidal (ky) spectrum, averaged over the radial direction. 
   - `:wavenumber`: wavenumber (k) spectrum, averaged over wavenumber magnitude |k|.
-
-  ## Returns:
-    (wavenumbers, E) where E = E(k) (`Tuple`).
 """
 function energy_spectrum(power_spectrum::AbstractArray, prob, time, ::Val{:radial})
-    return vec(sum(power_spectrum; dims=1)) * (2 * pi / prob.domain.Ly) # prob.domain.kx,
+    @unpack domain = prob
+    return vec(spectral_sum(power_spectrum, domain; dims=1)) *
+           (differential_area(domain)^2 /
+            (2π * domain.Ly)) # domain.kx,
 end
 
 function energy_spectrum(power_spectrum::AbstractArray, prob, time, ::Val{:poloidal})
-    return vec(sum(power_spectrum; dims=2)) * (2 * pi / prob.domain.Lx) # prob.domain.ky, 
+    @unpack domain = prob
+    return vec(spectral_sum(power_spectrum, domain; dims=2)) *
+           (differential_area(domain)^2 /
+            (2π * domain.Lx)) # prob.domain.ky, 
 end
 
 # TODO add windowed option?
@@ -100,16 +135,16 @@ function energy_spectrum(power_spectrum::AbstractArray{<:Number,2},
     @unpack domain = prob
 
     # Determine dk for binning [k-dk, k+dk] inspired by Camargo
-    dk = 0.5 * min(2 * pi / domain.Lx, 2 * pi / domain.Ly)
+    dk = 0.5 * min(2π / domain.Lx, 2π / domain.Ly)
     # Compute magnitudes
     k_magnitude = hypot.(domain.kx', domain.ky)
     # Determine bins
     nbins = ceil(Int, maximum(k_magnitude) / dk) # Or = max(size(domain)...)
     k_values = (0:nbins) .* dk
-    # Compute energy spectrum (S(k) = 2π*(∫S(k, θ)dθ, θ∈[0, 2π])/2π)
-    E = 2pi .* [mean(power_spectrum[k-dk.<=k_magnitude.<k+dk]) for k in k_values]
+    # Compute energy spectrum (S(k)/2π = (∫S(k, θ)dθ, θ∈[0, 2π])/2π)
+    E = [mean(power_spectrum[k-dk.<=k_magnitude.<k+dk]) for k in k_values]
     # Return spectrum alongside wavenumbers
-    return E #k_values, E
+    return E * (differential_area(domain)^2 / 2π) #k_values, 
 end
 
 """
@@ -139,7 +174,7 @@ end
 function potential_energy_spectrum(state_hat, prob, time, spectrum=Val(:radial))
     @unpack domain = prob
     n_hat = selectdim(state_hat, ndims(state_hat), 1)
-    energy_spectrum(abs2.(n_hat), prob, time, spectrum)
+    energy_spectrum(abs2.(n_hat), prob, time, spectrum) / 2
 end
 
 function potential_energy_spectrum(state_hat::AbstractArray, prob, time;
@@ -171,8 +206,8 @@ end
 function kinetic_energy_spectrum(state_hat::AbstractArray, prob, time,
                                  spectrum=Val{:radial})
     @unpack domain = prob
-    Ω_hat = selectdim(state_hat, ndims(state_hat), 1)
-    energy_spectrum(abs2.(Ω_hat), prob, time, spectrum)
+    Ω_hat = selectdim(state_hat, ndims(state_hat), 2)
+    energy_spectrum(abs2.(Ω_hat), prob, time, spectrum) / 2
 end
 
 function kinetic_energy_spectrum(state_hat, prob, time; spectrum=:radial)
