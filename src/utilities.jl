@@ -373,11 +373,11 @@ function plot(domain::AbstractDomain, args...; kwargs...)
 end
 
 """
-frequencies(state)
+frequencies(field::AbstractArray)
 
   Displays a heatmap of the mode-amplitudes using log scale.
 """
-frequencies(state::AbstractArray) = heatmap(log10.(abs.(state)); title="Frequencies")
+frequencies(field::AbstractArray) = heatmap(log10.(abs.(field)); title="Frequencies")
 
 # --------------------------------------- Mailing ------------------------------------------
 
