@@ -218,8 +218,8 @@ Generate random noise from randomly phased spectral modes, with zonal and stream
                                    include_zonal=false, include_streamer=false)
     θ = 2π * rand(spectral_size(domain)..., (ndims == 1 ? () : (ndims,))...)
     u_hat = value .* exp.(im * θ)
-    include_zonal || selectdim(u_hat, 1, 1) .= 0.0
-    include_streamer || selectdim(u_hat, 2, 1) .= 0.0
+    include_zonal || (selectdim(u_hat, 1, 1) .= 0.0)
+    include_streamer || (selectdim(u_hat, 2, 1) .= 0.0)
     spectral_transform(u_hat, bwd(domain))
 end
 
@@ -251,8 +251,8 @@ and the vorticity is derived from the potential via:
     Ω_hat = laplacian(ϕ_hat)
     u_hat = cat(n_hat, Ω_hat; dims=3)
 
-    include_zonal || selectdim(u_hat, 1, 1) .= 0.0
-    include_streamer || selectdim(u_hat, 2, 1) .= 0.0
+    include_zonal || (selectdim(u_hat, 1, 1) .= 0.0)
+    include_streamer || (selectdim(u_hat, 2, 1) .= 0.0)
 
     spectral_transform(u_hat, bwd(domain))
 end
@@ -352,8 +352,8 @@ remove_zonal_modes!(u::AbstractArray, d::AbstractDomain) = selectdim(u, 1, 1) .=
 remove_streamer_modes!(u::AbstractArray, d::AbstractDomain) = selectdim(u, 2, 1) .= 0.0
 
 function remove_asymmetric_modes!(u::AbstractArray, domain::AbstractDomain)
-    domain.Nx % 2 == 0 && selectdim(u, 2, domain.Nx ÷ 2 + 1) .= 0.0
-    domain.Ny % 2 == 0 && selectdim(u, 1, domain.Nx ÷ 2 + 1) .= 0.0
+    domain.Nx % 2 == 0 && (selectdim(u, 2, domain.Nx ÷ 2 + 1) .= 0.0)
+    domain.Ny % 2 == 0 && (selectdim(u, 1, domain.Nx ÷ 2 + 1) .= 0.0)
 end
 
 const remove_nyquist_modes! = remove_asymmetric_modes!
