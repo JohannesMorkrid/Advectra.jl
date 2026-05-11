@@ -74,11 +74,11 @@ end
 _spectral_sum(f, A::AbstractArray, dims, ::FFTPlans) = sum(f, A; dims)
 
 function _spectral_sum(f, A::AbstractArray, dims::Colon, ::rFFTPlans)
-    2 * sum(f, A) - sum(f, selectdim(A, 1, 1))
+    2 * sum(f, A) - sum(f, selectdim(A, 1, 1:1))
 end
 
 function _spectral_sum(f, A::AbstractArray, dims, ::rFFTPlans)
-    1 in dims ? 2 .* sum(f, A; dims) .- sum(f, selectdim(A, 1, 1); dims) : sum(f, A; dims)
+    1 in dims ? 2 .* sum(f, A; dims) .- sum(f, selectdim(A, 1, 1:1); dims) : sum(f, A; dims)
 end
 
 # User interface
