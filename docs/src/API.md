@@ -45,7 +45,7 @@ Advectra.MSS3
 ```@docs 
 Advectra.log_space
 Advectra.send_mail
-``` 
+```
 
 # Full API:
 

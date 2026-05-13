@@ -221,7 +221,7 @@ Return a tuple of lengths for each axis, default (Ly, Lx).
 lengths(domain::Domain) = (domain.Ly, domain.Lx)
 
 """
-    differential_elements()
+    differential_elements(domain::Domain)
 
 Return a tuple of differential elements, the grid spacing along each axis, default (dy, dx).
 """
@@ -249,7 +249,7 @@ Return a tuple of wave vectors for each axis, default (ky, kx).
 wave_vectors(domain::Domain) = (domain.ky, domain.kx)
 
 """
-    domain_kwargs(domain::AbstractArray)
+    domain_kwargs(domain::AbstractDomain)
 
 Return the domain specific keyword arguments, depending on the type of AbstractDomain.
 """
@@ -284,14 +284,78 @@ Compute the differential area of the domain. By default use prod(differential_ar
 """
 differential_area(domain::AbstractDomain) = prod(differential_elements(domain))
 
-# Getters
+# ---------------------------------------- Getters -----------------------------------------
+
+"""
+    get_transform_plans(domain::AbstractDomain)
+
+Return the transform plans associated with the `domain`.
+
+See also: [`get_fwd`](@ref), [`get_bwd`](@ref)
+"""
 get_transform_plans(domain::AbstractDomain) = domain.transforms
+
+"""
+    get_fwd(domain::AbstractDomain)
+
+Return the forward transform plan from the `domain`.
+
+The forward transform converts fields from physical to spectral space.
+
+See also: [`get_bwd`](@ref), [`get_transform_plans`](@ref)
+"""
 get_fwd(domain::AbstractDomain) = get_fwd(get_transform_plans(domain))
+
+"""
+    get_bwd(domain::AbstractDomain)
+
+Return the inverse transform plan from the `domain`.
+
+The inverse transform converts fields from spectral to physical space.
+
+See also: [`get_fwd`](@ref), [`get_transform_plans`](@ref)
+"""
 get_bwd(domain::AbstractDomain) = get_bwd(get_transform_plans(domain))
+
+"""
+    get_precision(domain::AbstractDomain)
+
+Return the numerical precision type used by the `domain`.
+"""
 get_precision(domain::AbstractDomain) = domain.precision
+
+"""
+    memory_type(domain::AbstractDomain)
+
+Returns a parameterized type combining the `MemoryType` and `precision` of the domain.
+For example, `Array{Float64}` or `CuArray{Float32}`.
+"""
 memory_type(domain::AbstractDomain) = domain.MemoryType{domain.precision}
 
-# Overloading
+# -------------------------------------- Overloading ---------------------------------------
+
+"""
+    Base.size(domain::AbstractDomain)
+
+Return a tuple `(Ny, Nx)` containing the number of grid points along each axis 
+(size in physical space).
+"""
 Base.size(domain::AbstractDomain) = (domain.Ny, domain.Nx)
+
+"""
+    Base.length(domain::AbstractDomain)
+
+Return the total number of grid points in the `domain` (length in physical space).
+
+See also: [`Base.size`](@ref)
+"""
 Base.length(domain::AbstractDomain) = prod(size(domain))
+
+"""
+    Base.ndims(domain::AbstractDomain)
+
+Return the number of dimensions of the `domain`.
+
+See also: [`Base.size`](@ref), [`Base.length`](@ref)
+"""
 Base.ndims(domain::AbstractDomain) = length(size(domain))

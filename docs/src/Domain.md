@@ -55,7 +55,7 @@ The code technically supports one dimensional Arrays by setting either $Nx=1$ or
 
 These helper functions come in handy when constructing `Arrays` and for use in diagnostics.
 
-```@docs
+```@docs; canonical=false
 Advectra.size(::Advectra.AbstractDomain)
 Advectra.spectral_size
 Advectra.ndims(::Advectra.AbstractDomain)
