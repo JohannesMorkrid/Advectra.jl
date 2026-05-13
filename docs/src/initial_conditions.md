@@ -18,7 +18,7 @@ conditions, see [Creating a new non-broadcastable initial condition](@ref).
 
 ```@docs
 Advectra.isolated_blob
-Advectra.isolated_thermal_blob
+Advectra.isolated_temperature_blob
 Advectra.gaussian
 Advectra.log_gaussian
 Advectra.random_crossphased
