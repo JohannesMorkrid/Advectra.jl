@@ -116,13 +116,13 @@ export spectral_sum
 function energy_spectrum(power_spectrum::AbstractArray, prob, time, ::Val{:radial})
     @unpack domain = prob
     return vec(spectral_sum(power_spectrum, domain; dims=1)) * differential_area(domain) /
-           (2π * domain.Lx * length(domain)) # domain.kx,
+           (2π * domain.Ly * length(domain)) # domain.kx,
 end
 
 function energy_spectrum(power_spectrum::AbstractArray, prob, time, ::Val{:poloidal})
     @unpack domain = prob
     return vec(spectral_sum(power_spectrum, domain; dims=2)) * differential_area(domain) /
-           (2π * domain.Ly * length(domain)) # prob.domain.ky, 
+           (2π * domain.Lx * length(domain)) # prob.domain.ky, 
 end
 
 # TODO add windowed option?
