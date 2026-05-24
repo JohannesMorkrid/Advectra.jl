@@ -133,12 +133,19 @@ function energy_spectrum(power_spectrum::AbstractArray{<:Number,2},
     dk = 0.5 * max(2π / domain.Lx, 2π / domain.Ly)
     # Compute magnitudes
     k_magnitude = hypot.(domain.kx', domain.ky)
-    # Determine bins
-    nbins = cld(maximum(k_magnitude), dk) # Or = max(size(domain)...)
-    k_values = (0:nbins) .* dk
-    # Compute energy spectrum (S(k)/2π = (∫S(k, θ)dθ, θ∈[0, 2π])/2π)
-    E = [mean(k_magnitude[k-dk.<=k_magnitude.<k+dk]) *
-         mean(power_spectrum[k-dk.<=k_magnitude.<k+dk]) for k in k_values]
+    # Determine masks
+    k_values = reshape((0:cld(maximum(k_magnitude), dk)) .* dk, 1, 1, :)
+    k_magnitude = reshape(k_magnitude, size(k_magnitude)..., 1)
+    masks = @. (k_values - dk ≤ k_magnitude) & (k_magnitude < k_values + dk)
+    # Reshape ps for GPU optimization   
+    ps = reshape(power_spectrum, size(power_spectrum)..., 1)
+    # Compute energy spectrum (S(k)k/2π = (∫S(k, θ)dθ, θ∈[0, 2π])/2π)
+    k_sums = vec(sum(k_magnitude .* masks; dims=(1, 2)))
+    ps_sums = vec(sum(ps .* masks; dims=(1, 2)))
+    denominator = vec(sum(masks; dims=(1, 2))) .^ 2
+
+    # Serves to average both k and power_spectrum
+    E = @. k_sums * ps_sums / max(denominator, 1)
     # Return spectrum alongside wavenumbers
     return E * (differential_area(domain) / (2π * length(domain))) #k_values, 
 end
