@@ -125,22 +125,22 @@ function energy_spectrum(power_spectrum::AbstractArray, prob, time, ::Val{:poloi
            (2π * domain.Lx * length(domain)) # prob.domain.ky, 
 end
 
-# TODO add windowed option?
 function energy_spectrum(power_spectrum::AbstractArray{<:Number,2},
                          prob, time, ::Val{:wavenumber})
     @unpack domain = prob
 
-    # Determine dk for binning [k-dk, k+dk] inspired by Camargo
-    dk = 0.5 * min(2π / domain.Lx, 2π / domain.Ly)
+    # Determine dk for binning [k-dk, k+dk] inspired by Camargo & Durran
+    dk = 0.5 * max(2π / domain.Lx, 2π / domain.Ly)
     # Compute magnitudes
     k_magnitude = hypot.(domain.kx', domain.ky)
     # Determine bins
-    nbins = ceil(Int, maximum(k_magnitude) / dk) # Or = max(size(domain)...)
+    nbins = cld(maximum(k_magnitude), dk) # Or = max(size(domain)...)
     k_values = (0:nbins) .* dk
     # Compute energy spectrum (S(k)/2π = (∫S(k, θ)dθ, θ∈[0, 2π])/2π)
-    E = [mean(power_spectrum[k-dk.<=k_magnitude.<k+dk]) for k in k_values]
+    E = [mean(k_magnitude[k-dk.<=k_magnitude.<k+dk]) *
+         mean(power_spectrum[k-dk.<=k_magnitude.<k+dk]) for k in k_values]
     # Return spectrum alongside wavenumbers
-    return E * (differential_area(domain)^2 / 2π) #k_values, 
+    return E * (differential_area(domain) / (2π * length(domain))) #k_values, 
 end
 
 """
