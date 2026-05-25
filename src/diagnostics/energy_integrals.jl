@@ -126,6 +126,106 @@ function build_diagnostic(::Val{:enstrophy_energy_integral}; kwargs...)
                assumes_spectral_state=true)
 end
 
+# -------------------------------------- Radial Flux ---------------------------------------
+
+"""
+    radial_flux(state_hat, prob, time)
+  
+  Computes the radial (x-direction) particle flux:
+  ```math
+    \\Gamma_x(t) = \\frac{1}{L_xL_y}\\int_0^{L_x}\\int_0^{L_y}nv_x dxdy,
+  ```
+
+  Uses Parseval's theorem to avoid FFTs, by computing directly in spectral space.
+"""
+function radial_flux(state_hat::AbstractArray, prob, time)
+    @unpack domain, operators = prob
+    @unpack solve_phi, diff_y = operators
+
+    slices = eachslice(state_hat; dims=ndims(state_hat))
+    n_hat = slices[1]
+    Ω_hat = slices[2]
+    dϕ_hat = -solve_phi(n_hat, Ω_hat)
+    diff_y(dϕ_hat, dϕ_hat)
+
+    parseval_integral(n_hat, dϕ_hat, domain)
+end
+
+function requires_operator(::Val{:radial_flux}; kwargs...)
+    [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_y)]
+end
+
+function build_diagnostic(::Val{:radial_flux}; kwargs...)
+    Diagnostic(; name="Radial flux",
+               method=radial_flux,
+               metadata="Average radial particle flux",
+               assumes_spectral_state=true)
+end
+
+# ------------------------------------- Poloidal Flux --------------------------------------
+
+"""
+    poloidal_flux(state_hat, prob, time)
+
+  Computes the poloidal (y-direction) particle flux:
+  ```math
+    \\Gamma_y(t) = \\frac{1}{L_xL_y}\\int_0^{L_x}\\int_0^{L_y}nv_y dxdy,
+  ```
+
+  Uses Parseval's theorem to avoid FFTs, by computing directly in spectral space.
+"""
+function poloidal_flux(state_hat::AbstractArray, prob, time)
+    @unpack domain, operators = prob
+    @unpack solve_phi, diff_x = operators
+
+    slices = eachslice(state_hat; dims=ndims(state_hat))
+    n_hat = slices[1]
+    Ω_hat = slices[2]
+    dϕ_hat = solve_phi(n_hat, Ω_hat)
+    diff_x(dϕ_hat, dϕ_hat)
+
+    parseval_integral(n_hat, dϕ_hat, domain)
+end
+
+function requires_operator(::Val{:poloidal_flux}; kwargs...)
+    [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_x)]
+end
+
+function build_diagnostic(::Val{:poloidal_flux}; kwargs...)
+    Diagnostic(; name="Poloidal flux",
+               method=poloidal_flux,
+               metadata="Average poloidal particle flux",
+               assumes_spectral_state=true)
+end
+
+# ------------------------------------- Flux Magnitude -------------------------------------
+
+"""
+    flux_magnitude(state_hat, prob, time)
+
+  Computes the magnitude of the total flux:
+  ```math
+    |\\Gamma|(t) = \\sqrt{\\Gamma_x^2 + \\Gamma_y^2}
+  ```
+"""
+function flux_magnitude(state_hat::AbstractArray, prob, time)
+    Γ_x = radial_flux(state_hat, prob, time)
+    Γ_y = poloidal_flux(state_hat, prob, time)
+    return sqrt(Γ_x^2 + Γ_y^2)
+end
+
+function requires_operator(::Val{:flux_magnitude}; kwargs...)
+    vcat(requires_operator(Val(:radial_flux); kwargs...),
+         requires_operator(Val(:poloidal_flux); kwargs...))
+end
+
+function build_diagnostic(::Val{:flux_magnitude}; kwargs...)
+    Diagnostic(; name="Flux magnitude",
+               method=flux_magnitude,
+               metadata="Magnitude of total particle flux",
+               assumes_spectral_state=true)
+end
+
 # ----------------------------- Dissipative Energy Integrals -------------------------------
 
 # ---------------------------- Resistive Dissipation Integral ------------------------------

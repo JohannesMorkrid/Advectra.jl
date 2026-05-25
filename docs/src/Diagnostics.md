@@ -30,7 +30,7 @@ viscous_dissipation_integral,
 enstrophy_dissipation_integral
 ```
 
-## Energy evolution intergrals
+## Energy evolution integrals
 
 ```
 energy_evolution_integral,
@@ -47,6 +47,11 @@ radial_flux
 ### Poloidal flux
 ```
 poloidal_flux
+```
+
+### Flux magnitude
+```
+flux_magnitude
 ```
 
 ## Probing
