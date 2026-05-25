@@ -257,7 +257,7 @@ function flux_spectrum(state_hat::AbstractArray, prob, time, spectrum=Val{:poloi
     Ω_hat = slices[2]
     ϕ_hat = solve_phi(n_hat, Ω_hat)
     vx_hat = -diff_y(ϕ_hat)
-    energy_spectrum(2 * real(n_hat .* conj.(vx_hat)), prob, time, spectrum)
+    energy_spectrum(real(n_hat .* conj.(vx_hat)), prob, time, spectrum)
 end
 
 function flux_spectrum(state_hat, prob, time; spectrum::Symbol=:poloidal)
