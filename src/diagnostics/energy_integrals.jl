@@ -2,37 +2,56 @@
 #                                Energy Integral Diagnostics                                
 # ------------------------------------------------------------------------------------------
 
-# ---------------------------------- Parseval's Theorem ------------------------------------
+# ----------------------------- Parseval's Theorem Utilities -------------------------------
 
-# For the most part uses Parseval's theorem, these does not correct for aliasing
-function parsevals_theorem(coeffs::AbstractArray, domain::Domain; compute_density=true)
-    _parsevals_theorem(coeffs, domain, Val(domain.real_transform); compute_density)
+"""
+    parseval_integral(u_hat::AbstractArray, domain::Domain; average=true)
+ 
+  Compute an integral using Parseval's theorem by working in spectral space.
+  
+  Uses spectral_sum to properly account for Hermitian symmetry in real transforms.
+  
+  Returns the integral ∫∫ |a|² dxdy if average=false,
+  or the average (integral/area) if average=true.
+"""
+function parseval_integral(u_hat::AbstractArray, domain::Domain; average=true)
+    integral = spectral_sum(abs2, u_hat, domain) / length(domain)^2
+    return average ? integral : area(domain) * integral
 end
 
-function _parsevals_theorem(coeffs::AbstractArray, domain::Domain,
-                            real_transform::Val{true}; compute_density=true)
-    integral = @views (2 * sum(abs2.(coeffs)) .- sum(abs2.(coeffs)[1, :])) *
-                      differential_area(domain) / length(domain)
-    return compute_density ? integral / area(domain) : integral
+"""
+    parseval_integral(a_hat::AbstractArray, b_hat::AbstractArray, domain::Domain; 
+                      average=true)
+ 
+  Compute the inner product using Parseval's theorem:
+  ∫∫ a(x,y) · b̄(x,y) dxdy = ∫∫ â(k) · b̂*(k) dk
+  
+  Uses spectral_sum to properly account for Hermitian symmetry in real transforms.
+  
+  Returns the integral ∫∫ a·conj(b) dxdy if average=false,
+  or the average (integral/area) if average=true.
+"""
+function parseval_integral(a_hat::AbstractArray, b_hat::AbstractArray, domain::Domain;
+                           average=true)
+    integral = spectral_sum(a_hat .* conj(b_hat), domain) / length(domain)^2
+    return average ? integral : area(domain) * integral
 end
 
-function _parsevals_theorem(coeffs::AbstractArray, domain::Domain,
-                            real_transform::Val{false}; compute_density=true)
-    integral = @views (sum(abs2.(coeffs))) * differential_area(domain) / length(domain)
-    return compute_density ? integral / area(domain) : integral
-end
+const parsevals_theorem = parseval_integral
 
 # ------------------------------ Integral Of Quadratic Term --------------------------------
 
-function integral_of_quadratic_term(u, v, domain, quadratic_term; compute_density=true)
+function integral_of_quadratic_term(u, v, domain, quadratic_term; average=true)
     @unpack transforms, U, V, up, vp, padded, dealiasing_coefficient = quadratic_term
     mul!(U, bwd(transforms), padded ? pad!(up, u, typeof(transforms)) : u)
     mul!(V, bwd(transforms), padded ? pad!(vp, v, typeof(transforms)) : v)
     @. U *= V
     # ∫∫ U dxdy ≈ ∑ U dxdy
     integral = dealiasing_coefficient .^ 2 * sum(U) * differential_area(domain)
-    return compute_density ? integral / area(domain) : integral
+    return average ? integral / area(domain) : integral
 end
+
+# ----------------------------------- Energy Integrals -------------------------------------
 
 # ------------------------------- Potential Energy Integral --------------------------------
 
@@ -40,7 +59,7 @@ end
 function potential_energy_integral(state_hat, prob, time; quadrature=nothing)
     @unpack domain = prob
     n_hat = selectdim(state_hat, ndims(state_hat), 1)
-    parsevals_theorem(n_hat, domain) / 2
+    parseval_integral(n_hat, domain) / 2
 end
 
 function build_diagnostic(::Val{:potential_energy_integral}; kwargs...)
@@ -49,8 +68,6 @@ function build_diagnostic(::Val{:potential_energy_integral}; kwargs...)
                metadata="Potential energy density.",
                assumes_spectral_state=true)
 end
-
-# ----------------------------------- Energy Integrals -------------------------------------
 
 # -------------------------------- Kinetic Energy Integral ---------------------------------
 
@@ -62,7 +79,7 @@ function kinetic_energy_integral(state_hat, prob, time; quadrature=nothing)
     n_hat = slices[1]
     Ω_hat = slices[2]
     ϕ_hat = solve_phi(n_hat, Ω_hat)
-    K = parsevals_theorem(diff_x(ϕ_hat), domain) .+ parsevals_theorem(diff_y(ϕ_hat), domain)
+    K = parseval_integral(diff_x(ϕ_hat), domain) .+ parseval_integral(diff_y(ϕ_hat), domain)
     return K / 2
 end
 
@@ -98,7 +115,7 @@ end
 function enstrophy_energy_integral(state_hat, prob, time; quadrature=nothing)
     @unpack domain = prob
     Ω_hat = selectdim(state_hat, ndims(state_hat), 2)
-    parsevals_theorem(Ω_hat, domain) / 2
+    parseval_integral(Ω_hat, domain) / 2
 end
 
 function build_diagnostic(::Val{:enstrophy_energy_integral}; kwargs...)
@@ -122,7 +139,7 @@ function resistive_dissipation_integral(state_hat, prob, time; adiabaticity_symb
     n_hat = slices[1]
     Ω_hat = slices[2]
     h_hat = n_hat .- solve_phi(n_hat, Ω_hat)
-    return C * parsevals_theorem(h_hat, domain)
+    return C * parseval_integral(h_hat, domain)
 end
 
 function requires_operator(::Val{:resistive_dissipation_integral}; kwargs...)
