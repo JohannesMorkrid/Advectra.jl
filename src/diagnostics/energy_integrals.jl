@@ -41,13 +41,14 @@ const parsevals_theorem = parseval_integral
 
 # ------------------------------ Integral Of Quadratic Term --------------------------------
 
+# TODO move or remove
 function integral_of_quadratic_term(u, v, domain, quadratic_term; average=true)
     @unpack transforms, U, V, up, vp, padded, dealiasing_coefficient = quadratic_term
     mul!(U, bwd(transforms), padded ? pad!(up, u, typeof(transforms)) : u)
     mul!(V, bwd(transforms), padded ? pad!(vp, v, typeof(transforms)) : v)
     @. U *= V
-    # ∫∫ U dxdy ≈ ∑ U dxdy
-    integral = dealiasing_coefficient .^ 2 * sum(U) * differential_area(domain)
+    # ∫∫ UV dxdy ≈ ∑ UV dxdy
+    integral = dealiasing_coefficient .* sum(U) * differential_area(domain)
     return average ? integral / area(domain) : integral
 end
 
@@ -56,7 +57,7 @@ end
 # ------------------------------- Potential Energy Integral --------------------------------
 
 # P(t) = ∫dx 1/2n^2
-function potential_energy_integral(state_hat, prob, time; quadrature=nothing)
+function potential_energy_integral(state_hat, prob, time)
     @unpack domain = prob
     n_hat = selectdim(state_hat, ndims(state_hat), 1)
     parseval_integral(n_hat, domain) / 2
@@ -72,7 +73,7 @@ end
 # -------------------------------- Kinetic Energy Integral ---------------------------------
 
 # K(t) = ∫1/2(∇_⟂Φ)^2 = ∫dx1/2 U_E^2
-function kinetic_energy_integral(state_hat, prob, time; quadrature=nothing)
+function kinetic_energy_integral(state_hat, prob, time)
     @unpack domain, operators = prob
     @unpack solve_phi, diff_x, diff_y = operators
     slices = eachslice(state_hat; dims=ndims(state_hat))
@@ -97,9 +98,9 @@ end
 # --------------------------------- Total Energy Integral ----------------------------------
 
 # E(t) = P(T) + K(T)
-function total_energy_integral(state_hat, prob, time; quadrature=nothing)
-    potential_energy_integral(state_hat, prob, time; quadrature=quadrature) .+
-    kinetic_energy_integral(state_hat, prob, time; quadrature=quadrature)
+function total_energy_integral(state_hat, prob, time)
+    potential_energy_integral(state_hat, prob, time) .+
+    kinetic_energy_integral(state_hat, prob, time)
 end
 
 function build_diagnostic(::Val{:total_energy_integral}; kwargs...)
@@ -112,7 +113,7 @@ end
 # ------------------------------- Enstrophy Energy Integral --------------------------------
 
 # U(t) = ∫1/2(∇_⟂^2Φ)^2 = ∫dx1/2 Ω^2
-function enstrophy_energy_integral(state_hat, prob, time; quadrature=nothing)
+function enstrophy_energy_integral(state_hat, prob, time)
     @unpack domain = prob
     Ω_hat = selectdim(state_hat, ndims(state_hat), 2)
     parseval_integral(Ω_hat, domain) / 2
@@ -130,8 +131,7 @@ end
 # ---------------------------- Resistive Dissipation Integral ------------------------------
 
 # Γ_c(t) = C∫(n-ϕ)^2
-function resistive_dissipation_integral(state_hat, prob, time; adiabaticity_symbol=:C,
-                                        quadrature=nothing)
+function resistive_dissipation_integral(state_hat, prob, time; adiabaticity_symbol=:C)
     @unpack domain, operators, p = prob
     @unpack solve_phi = operators
     C = getfield(p, adiabaticity_symbol)
@@ -159,18 +159,16 @@ end
 # ---------------------------- Potential Dissipation Integral ------------------------------
 
 # D^E_N(t) = ν∫n∇⁶_⟂n
-function potential_dissipation_integral(state_hat, prob, time; diffusivity_symbol=:ν,
-                                        quadrature=nothing)
+function potential_dissipation_integral(state_hat, prob, time; diffusivity_symbol=:ν)
     @unpack domain, p, operators = prob
-    @unpack hyper_laplacian, quadratic_term = operators
+    @unpack hyper_laplacian = operators
     ν = getfield(p, diffusivity_symbol)
-    n_hat = selectdim(state_hat, ndims(state_hat), 1)
-    ν * integral_of_quadratic_term(n_hat, hyper_laplacian(n_hat), domain, quadratic_term)
+    n_hat = eachslice(state_hat; dims=ndims(state_hat))[1]
+    ν * parseval_integral(n_hat, hyper_laplacian(n_hat), domain)
 end
 
 function requires_operator(::Val{:potential_dissipation_integral}; order=3, kwargs...)
-    [OperatorRecipe(:laplacian; order=order, alias=:hyper_laplacian),
-     OperatorRecipe(:quadratic_term)]
+    [OperatorRecipe(:laplacian; order=order, alias=:hyper_laplacian)]
 end
 
 function build_diagnostic(::Val{:potential_dissipation_integral}; diffusivity_symbol=:ν,
@@ -186,19 +184,19 @@ end
 # ----------------------------- Kinetic Dissipation Integral -------------------------------
 
 # D^E_V(t) = μ∫ϕ∇⁶_⟂Ω = μ∫(∇²_⟂Ω)² 
-function kinetic_dissipation_integral(state_hat, prob, time; viscosity_symbol=:μ,
-                                      quadrature=nothing)
+function kinetic_dissipation_integral(state_hat, prob, time; viscosity_symbol=:μ)
     @unpack domain, p, operators = prob
-    @unpack solve_phi, hyper_laplacian, quadratic_term = operators
+    @unpack solve_phi, hyper_laplacian = operators
     μ = getfield(p, viscosity_symbol)
-    n_hat = selectdim(state_hat, ndims(state_hat), 1)
-    Ω_hat = selectdim(state_hat, ndims(state_hat), 2)
+    slices = eachslice(state_hat; dims=ndims(state_hat))
+    n_hat = slices[1]
+    Ω_hat = slices[2]
     ϕ_hat = solve_phi(n_hat, Ω_hat)
-    μ * integral_of_quadratic_term(ϕ_hat, hyper_laplacian(Ω_hat), domain, quadratic_term)
+    μ * parseval_integral(ϕ_hat, hyper_laplacian(Ω_hat), domain)
 end
 
 function requires_operator(::Val{:kinetic_dissipation_integral}; order=3, kwargs...)
-    [OperatorRecipe(:solve_phi), OperatorRecipe(:quadratic_term),
+    [OperatorRecipe(:solve_phi),
      OperatorRecipe(:laplacian; order=order, alias=:hyper_laplacian)]
 end
 
@@ -216,12 +214,9 @@ end
 
 # D^E(t) = D^E_N(t) + D^E_V(t) 
 function viscous_dissipation_integral(state_hat, prob, time; diffusivity_symbol=:ν,
-                                      viscosity_symbol=:μ, quadrature=nothing)
-    potential_dissipation_integral(state_hat, prob, time;
-                                   diffusivity_symbol=diffusivity_symbol,
-                                   quadrature=quadrature) .+
-    kinetic_dissipation_integral(state_hat, prob, time; viscosity_symbol=viscosity_symbol,
-                                 quadrature=quadrature)
+                                      viscosity_symbol=:μ)
+    potential_dissipation_integral(state_hat, prob, time; diffusivity_symbol) .+
+    kinetic_dissipation_integral(state_hat, prob, time; viscosity_symbol)
 end
 
 function requires_operator(::Val{:viscous_dissipation_integral}; order=3, kwargs...)
@@ -246,19 +241,19 @@ end
 function enstrophy_dissipation_integral(state_hat, prob, time; diffusivity_symbol=:ν,
                                         viscosity_symbol=:μ, kwargs...)
     @unpack domain, p, operators = prob
-    @unpack hyper_laplacian, quadratic_term = operators
+    @unpack hyper_laplacian = operators
     ν = getfield(p, diffusivity_symbol)
     μ = getfield(p, viscosity_symbol)
-    n_hat = selectdim(state_hat, ndims(state_hat), 1)
-    Ω_hat = selectdim(state_hat, ndims(state_hat), 2)
+    slices = eachslice(state_hat; dims=ndims(state_hat))
+    n_hat = slices[1]
+    Ω_hat = slices[2]
     h_hat = n_hat - Ω_hat
     diffusive_terms_hat = ν * hyper_laplacian(n_hat) - μ * hyper_laplacian(Ω_hat)
-    integral_of_quadratic_term(h_hat, diffusive_terms_hat, domain, quadratic_term)
+    parseval_integral(h_hat, diffusive_terms_hat, domain)
 end
 
 function requires_operator(::Val{:enstrophy_dissipation_integral}; kwargs...)
-    [OperatorRecipe(:laplacian; order=3, alias=:hyper_laplacian),
-     OperatorRecipe(:quadratic_term)]
+    [OperatorRecipe(:laplacian; order=3, alias=:hyper_laplacian)]
 end
 
 function build_diagnostic(::Val{:enstrophy_dissipation_integral}; diffusivity_symbol=:ν,
@@ -278,15 +273,11 @@ end
 
 # dE/dt(t) = Γ_n - Γ_c - D^E 
 function energy_evolution_integral(state_hat, prob, time; adiabaticity_symbol=:C,
-                                   diffusivity_symbol=:ν, viscosity_symbol=:μ,
-                                   quadrature=nothing)
-    radial_flux(state_hat, prob, time; quadrature=quadrature) .-
-    resistive_dissipation_integral(state_hat, prob, time;
-                                   adiabaticity_symbol=adiabaticity_symbol,
-                                   quadrature=quadrature) .-
-    viscous_dissipation_integral(state_hat, prob, time;
-                                 diffusivity_symbol=diffusivity_symbol,
-                                 viscosity_symbol=viscosity_symbol, quadrature=quadrature)
+                                   diffusivity_symbol=:ν, viscosity_symbol=:μ)
+    radial_flux(state_hat, prob, time) .-
+    resistive_dissipation_integral(state_hat, prob, time; adiabaticity_symbol) .-
+    viscous_dissipation_integral(state_hat, prob, time; diffusivity_symbol,
+                                 viscosity_symbol)
 end
 
 function requires_operator(::Val{:energy_evolution_integral}; order=3, kwargs...)
@@ -312,11 +303,10 @@ end
 
 #dU / dt(t) = Γ_n - D^U
 function enstrophy_evolution_integral(state_hat, prob, time; diffusivity_symbol=:ν,
-                                      viscosity_symbol=:μ, quadrature=nothing)
-    radial_flux(state_hat, prob, time; quadrature=quadrature) .-
-    enstrophy_dissipation_integral(state_hat, prob, time;
-                                   diffusivity_symbol=diffusivity_symbol,
-                                   viscosity_symbol=viscosity_symbol, quadrature=quadrature)
+                                      viscosity_symbol=:μ)
+    radial_flux(state_hat, prob, time) .-
+    enstrophy_dissipation_integral(state_hat, prob, time; diffusivity_symbol,
+                                   viscosity_symbol)
 end
 
 function requires_operator(::Val{:enstrophy_evolution_integral}; order=3, kwargs...)
