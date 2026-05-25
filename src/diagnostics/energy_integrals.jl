@@ -92,19 +92,19 @@ function build_diagnostic(::Val{:total_energy_integral}; kwargs...)
                assumes_spectral_state=true)
 end
 
-# ------------------------------- Enstropy Energy Integral ---------------------------------
+# ------------------------------- Enstrophy Energy Integral --------------------------------
 
 # U(t) = ∫1/2(∇_⟂^2Φ)^2 = ∫dx1/2 Ω^2
-function enstropy_energy_integral(state_hat, prob, time; quadrature=nothing)
+function enstrophy_energy_integral(state_hat, prob, time; quadrature=nothing)
     @unpack domain = prob
     Ω_hat = selectdim(state_hat, ndims(state_hat), 2)
     parsevals_theorem(Ω_hat, domain) / 2
 end
 
-function build_diagnostic(::Val{:enstropy_energy_integral}; kwargs...)
-    Diagnostic(; name="Enstropy energy integral",
-               method=enstropy_energy_integral,
-               metadata="Enstropy energy density.",
+function build_diagnostic(::Val{:enstrophy_energy_integral}; kwargs...)
+    Diagnostic(; name="Enstrophy energy integral",
+               method=enstrophy_energy_integral,
+               metadata="Enstrophy energy density.",
                assumes_spectral_state=true)
 end
 
@@ -223,11 +223,11 @@ function build_diagnostic(::Val{:viscous_dissipation_integral}; diffusivity_symb
                kwargs=diagnostic_kwargs)
 end
 
-# ----------------------------- Enstropy Dissipation Integral ------------------------------
+# ---------------------------- Enstrophy Dissipation Integral ------------------------------
 
 # D^U(t) = ∫(n-Ω)(ν∇⁶_⟂n - μ∇⁶_⟂Ω)
-function enstropy_dissipation_integral(state_hat, prob, time; diffusivity_symbol=:ν,
-                                       viscosity_symbol=:μ, kwargs...)
+function enstrophy_dissipation_integral(state_hat, prob, time; diffusivity_symbol=:ν,
+                                        viscosity_symbol=:μ, kwargs...)
     @unpack domain, p, operators = prob
     @unpack hyper_laplacian, quadratic_term = operators
     ν = getfield(p, diffusivity_symbol)
@@ -239,18 +239,18 @@ function enstropy_dissipation_integral(state_hat, prob, time; diffusivity_symbol
     integral_of_quadratic_term(h_hat, diffusive_terms_hat, domain, quadratic_term)
 end
 
-function requires_operator(::Val{:enstropy_dissipation_integral}; kwargs...)
+function requires_operator(::Val{:enstrophy_dissipation_integral}; kwargs...)
     [OperatorRecipe(:laplacian; order=3, alias=:hyper_laplacian),
      OperatorRecipe(:quadratic_term)]
 end
 
-function build_diagnostic(::Val{:enstropy_dissipation_integral}; diffusivity_symbol=:ν,
+function build_diagnostic(::Val{:enstrophy_dissipation_integral}; diffusivity_symbol=:ν,
                           viscosity_symbol=:μ, kwargs...)
     diagnostic_kwargs = (; diffusivity_symbol=diffusivity_symbol,
                          viscosity_symbol=viscosity_symbol)
-    Diagnostic(; name="Enstropy dissipation integral",
-               method=enstropy_dissipation_integral,
-               metadata="Enstropy energy dissipation density.",
+    Diagnostic(; name="Enstrophy dissipation integral",
+               method=enstrophy_dissipation_integral,
+               metadata="Enstrophy energy dissipation density.",
                assumes_spectral_state=true,
                kwargs=diagnostic_kwargs)
 end
@@ -291,29 +291,29 @@ function build_diagnostic(::Val{:energy_evolution_integral}; adiabaticity_symbol
                kwargs=diagnostic_kwargs)
 end
 
-# ------------------------------- Enstropy Energy Integral ---------------------------------
+# ------------------------------- Enstrophy Energy Integral --------------------------------
 
 #dU / dt(t) = Γ_n - D^U
-function enstropy_evolution_integral(state_hat, prob, time; diffusivity_symbol=:ν,
-                                     viscosity_symbol=:μ, quadrature=nothing)
+function enstrophy_evolution_integral(state_hat, prob, time; diffusivity_symbol=:ν,
+                                      viscosity_symbol=:μ, quadrature=nothing)
     radial_flux(state_hat, prob, time; quadrature=quadrature) .-
-    enstropy_dissipation_integral(state_hat, prob, time;
-                                  diffusivity_symbol=diffusivity_symbol,
-                                  viscosity_symbol=viscosity_symbol, quadrature=quadrature)
+    enstrophy_dissipation_integral(state_hat, prob, time;
+                                   diffusivity_symbol=diffusivity_symbol,
+                                   viscosity_symbol=viscosity_symbol, quadrature=quadrature)
 end
 
-function requires_operator(::Val{:enstropy_evolution_integral}; order=3, kwargs...)
+function requires_operator(::Val{:enstrophy_evolution_integral}; order=3, kwargs...)
     vcat(requires_operator(Val(:radial_flux); kwargs...),
-         requires_operator(Val(:enstropy_dissipation_integral); order=order, kwargs...))
+         requires_operator(Val(:enstrophy_dissipation_integral); order=order, kwargs...))
 end
 
-function build_diagnostic(::Val{:enstropy_evolution_integral}; diffusivity_symbol=:ν,
+function build_diagnostic(::Val{:enstrophy_evolution_integral}; diffusivity_symbol=:ν,
                           viscosity_symbol=:μ, kwargs...)
     diagnostic_kwargs = (; diffusivity_symbol=diffusivity_symbol,
                          viscosity_symbol=viscosity_symbol)
-    Diagnostic(; name="Enstropy evolution integral",
-               method=enstropy_evolution_integral,
-               metadata="Enstropy density evolution.",
+    Diagnostic(; name="Enstrophy evolution integral",
+               method=enstrophy_evolution_integral,
+               metadata="Enstrophy density evolution.",
                assumes_spectral_state=true,
                kwargs=diagnostic_kwargs)
 end

@@ -22,19 +22,19 @@ plot_potential
 potential_energy_integral,
 kinetic_energy_integral,
 total_energy_integral,
-enstropy_energy_integral,
+enstrophy_energy_integral,
 resistive_dissipation_integral,
 potential_dissipation_integral
 kinetic_dissipation_integral,
 viscous_dissipation_integral,
-enstropy_dissipation_integral
+enstrophy_dissipation_integral
 ```
 
 ## Energy evolution intergrals
 
 ```
 energy_evolution_integral,
-enstropy_evolution_integral,
+enstrophy_evolution_integral,
 ```
 
 ## Flux
