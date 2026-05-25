@@ -334,7 +334,9 @@ function electrostatic_potential_spectrum(state_hat, prob, time; spectrum::Symbo
     electrostatic_potential_spectrum(state_hat, prob, time, Val(spectrum))
 end
 
-requires_operator(::Val{:kinetic_energy_spectrum}; kwargs...) = [OperatorRecipe(:solve_phi)]
+function requires_operator(::Val{:electrostatic_potential_spectrum}; kwargs...)
+    [OperatorRecipe(:solve_phi)]
+end
 
 function build_diagnostic(::Val{:electrostatic_potential_spectrum};
                           spectrum::Symbol=:wavenumber, kwargs...)
