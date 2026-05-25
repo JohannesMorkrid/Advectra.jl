@@ -30,8 +30,8 @@ export cfl, radial_COM, plot_density, plot_vorticity, plot_potential,
        viscous_dissipation_integral, enstropy_dissipation_integral,
        energy_evolution_integral, enstropy_evolution_integral, radial_flux, poloidal_flux,
        probe_density, probe_vorticity, probe_potential, probe_radial_velocity, probe_all,
-       progress, get_modes, get_log_modes, potential_energy_spectrum,
-       kinetic_energy_spectrum
+       progress, get_modes, get_log_modes, potential_energy_spectrum, flux_spectrum,
+       kinetic_energy_spectrum, enstrophy_spectrum, electrostatic_potential_spectrum
 
 include("spectralODEProblem.jl")
 export SpectralODEProblem
