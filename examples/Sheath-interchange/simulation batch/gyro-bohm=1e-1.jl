@@ -41,7 +41,7 @@ diagnostics = @diagnostics [
     radial_flux(; stride=100),
     kinetic_energy_integral(; stride=100),
     potential_energy_integral(; stride=100),
-    enstropy_energy_integral(; stride=100),
+    enstrophy_energy_integral(; stride=100),
     get_log_modes(; stride=500, axis=:diag),
     cfl(; stride=500, silent=true)
     #potential_energy_spectrum(; spectrum=:radial, stride=50),

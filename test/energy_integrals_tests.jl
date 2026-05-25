@@ -32,8 +32,8 @@ potential_energy = build_diagnostic(Val(:potential_energy_integral))
 potential_energy(ic_hat, prob, 0.0)
 total_energy = build_diagnostic(Val(:total_energy_integral))
 total_energy(ic_hat, prob, 0.0)
-enstropy_energy = build_diagnostic(Val(:enstropy_energy_integral))
-enstropy_energy(ic_hat, prob, 0.0)
+enstrophy_energy = build_diagnostic(Val(:enstrophy_energy_integral))
+enstrophy_energy(ic_hat, prob, 0.0)
 
 # Dissipative energy integrals:
 
@@ -49,17 +49,17 @@ kinetic_dissipation(ic_hat, prob, 0.0)
 viscous_dissipation = build_diagnostic(Val(:viscous_dissipation_integral);
                                        viscosity_symbol=:c, diffusivity_symbol=:c)
 viscous_dissipation(ic_hat, prob, 0.0)
-enstropy_dissipation = build_diagnostic(Val(:enstropy_dissipation_integral);
-                                        viscosity_symbol=:c, diffusivity_symbol=:c)
-enstropy_dissipation(ic_hat, prob, 0.0)
+enstrophy_dissipation = build_diagnostic(Val(:enstrophy_dissipation_integral);
+                                         viscosity_symbol=:c, diffusivity_symbol=:c)
+enstrophy_dissipation(ic_hat, prob, 0.0)
 
 # Energy evolution integrals:
 energy_evolution = build_diagnostic(Val(:energy_evolution_integral); adiabaticity_symbol=:c,
                                     diffusivity_symbol=:c, viscosity_symbol=:c)
 energy_evolution(ic_hat, prob, 0.0)
-enstropy_evolution = build_diagnostic(Val(:enstropy_evolution_integral);
-                                      diffusivity_symbol=:c, viscosity_symbol=:c)
-enstropy_evolution(ic_hat, prob, 0.0)
+enstrophy_evolution = build_diagnostic(Val(:enstrophy_evolution_integral);
+                                       diffusivity_symbol=:c, viscosity_symbol=:c)
+enstrophy_evolution(ic_hat, prob, 0.0)
 
 import Advectra: parsevals_theorem, integral_of_quadratic_term
 # Test robustness, should give 1
@@ -91,13 +91,13 @@ parsevals_theorem(ones(129, 256), domain; compute_density=false)
     - Kinetic energy
     - Potential energy
     - Total energy
-    - Enstropy energy
+    - Enstrophy energy
 * Test that all dissipative energy integrals work:
     - Resistive dissipation
     - Potential dissipation
     - Kinetic dissipation
     - Viscous dissipation
-    - Enstropy dissipation
+    - Enstrophy dissipation
 * Test that all energy evolution integrals work:
     - Energy evolution 
     - Enstrophy evolution
