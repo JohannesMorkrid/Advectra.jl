@@ -95,6 +95,54 @@ function build_diagnostic(::Val{:kinetic_energy_integral}; kwargs...)
                assumes_spectral_state=true)
 end
 
+# ----------------------------- Zonal Kinetic Energy Integral ------------------------------
+
+function zonal_kinetic_energy_integral(state_hat, prob, time)
+    @unpack domain, operators = prob
+    @unpack solve_phi, diff_x = operators
+    slices = eachslice(state_hat; dims=ndims(state_hat))
+    n_hat = slices[1]
+    Ω_hat = slices[2]
+    ϕ_hat = solve_phi(n_hat, Ω_hat)
+    ϕ_zonal = selectdim(ϕ_hat, 1, 1)
+    parseval_integral(diff_x(ϕ_zonal), domain) / 2
+end
+
+function requires_operator(::Val{:zonal_kinetic_energy_integral}; kwargs...)
+    [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_x)]
+end
+
+function build_diagnostic(::Val{:zonal_kinetic_energy_integral}; kwargs...)
+    Diagnostic(; name="Zonal kinetic energy integral",
+               method=zonal_kinetic_energy_integral,
+               metadata="Kinetic energy density (k_y=0).",
+               assumes_spectral_state=true)
+end
+
+# --------------------------- Streamer Kinetic Energy Integral -----------------------------
+
+function streamer_kinetic_energy_integral(state_hat, prob, time)
+    @unpack domain, operators = prob
+    @unpack solve_phi, diff_y = operators
+    slices = eachslice(state_hat; dims=ndims(state_hat))
+    n_hat = slices[1]
+    Ω_hat = slices[2]
+    ϕ_hat = solve_phi(n_hat, Ω_hat)
+    ϕ_streamer = selectdim(ϕ_hat, 2, 1)
+    parseval_integral(diff_y(ϕ_streamer), domain) / 2
+end
+
+function requires_operator(::Val{:streamer_kinetic_energy_integral}; kwargs...)
+    [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_y)]
+end
+
+function build_diagnostic(::Val{:streamer_kinetic_energy_integral}; kwargs...)
+    Diagnostic(; name="Streamer kinetic energy integral",
+               method=streamer_kinetic_energy_integral,
+               metadata="Kinetic energy density (k_x=0).",
+               assumes_spectral_state=true)
+end
+
 # --------------------------------- Total Energy Integral ----------------------------------
 
 # E(t) = P(T) + K(T)
