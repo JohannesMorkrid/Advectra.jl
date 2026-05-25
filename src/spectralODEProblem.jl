@@ -76,6 +76,9 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,
         tspan = convert.(domain.precision, promote(first(tspan), last(tspan)))
         dt = convert(domain.precision, dt)
 
+        # Convert parameters to domain precision
+        p = convert_parameters(get_precision(domain), p)
+
         # Returns a NamedTuple with `SpectralOperator`s
         ops = build_operators(domain; operators, aliases, additional_operators, diagnostics,
                               kwargs...)
@@ -113,7 +116,7 @@ function prepare_initial_condition(u0, domain::Domain)
     u0 |> domain.MemoryType{eltype(fwd(domain))}
 end
 
-# -------------------------- Spectral Coefficent Initialization ----------------------------
+# -------------------------- Spectral Coefficient Initialization ---------------------------
 
 """
 """
@@ -146,6 +149,16 @@ end
 function _allocate_coefficients(u0::AbstractArray{<:AbstractArray}, domain::Domain)
     [_allocate_coefficients(u, domain) for u in u0]
 end
+
+# --------------------------------- Converting Parameters ----------------------------------
+
+convert_parameters(::Type{T}, x::AbstractFloat) where {T} = convert(T, x)
+
+function convert_parameters(::Type{T}, x::Union{Tuple,NamedTuple,AbstractArray}) where {T}
+    map(y -> convert_parameters(T, y), x)
+end
+
+convert_parameters(::Type{T}, x) where {T} = x
 
 # --------------------------------- Building Of Operators ----------------------------------
 
