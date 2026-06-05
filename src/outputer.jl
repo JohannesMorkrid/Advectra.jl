@@ -168,7 +168,7 @@ end
                        store_hdf=store_hdf, h5_kwargs=h5_kwargs)
 
   Creates a *HDF5* file, if not existing, and writes a group with `simulation_name` to it, 
-  refered to as a `simulation` group. If the simulation group does not exists, the `h5_kwargs` 
+  referred to as a `simulation` group. If the simulation group does not exists, the `h5_kwargs` 
   are applied to the `"fields"` and `"t"` datasets. The opened `simulation` is returned.
 """
 function setup_simulation_group(filename, simulation_name, prob; store_hdf=true,
@@ -279,14 +279,28 @@ function write_attributes(simulation, domain::AbstractDomain)
     end
 end
 
+function default_chunk(sample; scalar_target_bytes=64 * 1024,
+                       array_target_bytes=1024 * 1024)
+    elsize = sizeof(eltype(sample))
+
+    if ndims(sample) == 0
+        n = max(1, round(Int, scalar_target_bytes / elsize))
+        return (n,)  # e.g. 8192 for Float64
+    else
+        array_bytes = prod(size(sample)) * elsize
+        time_chunk = max(1, round(Int, array_target_bytes / array_bytes))
+        return (size(sample)..., time_chunk)
+    end
+end
+
 # -------------------------------- HDF5 Diagnostic Storage ---------------------------------
 
 """
     setup_simulation_group(file, simulation_name, N_samples, state, prob, t0; h5_kwargs)
 
   Creates a *HDF5* group with `simulation_name` (a "simulation"), and allocates the correct 
-  sizes based on `N_samples` with the fields being chunked with additinal `h5_kwargs` applied.
-  In addition the inital condition is written along with the attributes of the `prob`.
+  sizes based on `N_samples` with the fields being chunked with additional `h5_kwargs` applied.
+  In addition the initial condition is written along with the attributes of the `prob`.
 """
 function setup_diagnostic_group(simulation, diagnostic, N_samples, sample, t0; h5_kwargs)
     if !haskey(simulation, diagnostic.name)
@@ -295,11 +309,11 @@ function setup_diagnostic_group(simulation, diagnostic, N_samples, sample, t0; h
 
         # Create dataset to store samples and associated time
         dset = create_dataset(h5group, "data", datatype(eltype(sample)),
-                              (size(sample)..., typemax(Int64)); chunk=(size(sample)..., 1),
-                              h5_kwargs...)
+                              (size(sample)..., typemax(Int64));
+                              chunk=default_chunk(sample), h5_kwargs...)
         HDF5.set_extent_dims(dset, (size(sample)..., N_samples))
         dset = create_dataset(h5group, "t", datatype(eltype(t0)), (typemax(Int64),);
-                              chunk=(1,), h5_kwargs...)
+                              chunk=default_chunk(t0), h5_kwargs...)
         HDF5.set_extent_dims(dset, (N_samples,))
 
         # Add metadata
@@ -734,7 +748,7 @@ function handle_output!(output::O, step::Integer, state::T, prob::SOP,
     maybe_sample_diagnostics!(output, step, state, prob, time)
 
     # Handle flushing of file
-    maybe_flush!(output)
+    maybe_flush!(output, step)
 
     # Check if first value is NaN, if one value is NaN the whole Array will turn NaN after FFT
     assert_no_nan(state, time)
@@ -820,9 +834,9 @@ end
     # end
 """
 
-function maybe_flush!(output)
-    # Time based flushing
-    if now() - output.last_flush_time >= Minute(output.flush_interval)
+function maybe_flush!(output, step)
+    # Flushes every flush_interval minutes or every 1024th step, whichever is first
+    if now() - output.last_flush_time >= Minute(output.flush_interval) || step % 1024 == 0
         output.store_hdf ? flush(output.simulation.file) : nothing
         output.last_flush_time = now()
     end
@@ -833,7 +847,7 @@ end
     save_checkpoint!(output::O, cache::C, step::Integer, t::N) where {O<:Output,
     C<:AbstractCache,N<:Number}
 
-  Creates or opens a `checkpoint` and stors the `cache`at time `t` corresponding to step=`step`.
+  Creates or opens a `checkpoint` and stores the `cache`at time `t` corresponding to step=`step`.
 """
 function save_checkpoint!(output::O, cache::C, step::Integer,
                           time::N) where {O<:Output,
