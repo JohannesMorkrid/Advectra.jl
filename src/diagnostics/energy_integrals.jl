@@ -104,7 +104,7 @@ function zonal_kinetic_energy_integral(state_hat, prob, time)
     n_hat = slices[1]
     Ω_hat = slices[2]
     ϕ_hat = solve_phi(n_hat, Ω_hat)
-    ϕ_zonal = selectdim(ϕ_hat, 1, 1)
+    ϕ_zonal = selectdim(ϕ_hat, 1, 1:1)
     parseval_integral(diff_x(ϕ_zonal), domain) / 2
 end
 
@@ -128,7 +128,7 @@ function streamer_kinetic_energy_integral(state_hat, prob, time)
     n_hat = slices[1]
     Ω_hat = slices[2]
     ϕ_hat = solve_phi(n_hat, Ω_hat)
-    ϕ_streamer = selectdim(ϕ_hat, 2, 1)
+    ϕ_streamer = selectdim(ϕ_hat, 2, 1:1)
     parseval_integral(diff_y(ϕ_streamer), domain) / 2
 end
 
@@ -345,7 +345,7 @@ end
 
 function requires_operator(::Val{:kinetic_dissipation_integral}; order=3, kwargs...)
     [OperatorRecipe(:solve_phi),
-     OperatorRecipe(:laplacian; order=order, alias=:hyper_laplacian)]
+        OperatorRecipe(:laplacian; order=order, alias=:hyper_laplacian)]
 end
 
 function build_diagnostic(::Val{:kinetic_dissipation_integral}; viscosity_symbol=:μ,
