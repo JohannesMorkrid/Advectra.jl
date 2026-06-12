@@ -73,12 +73,17 @@ end
 
 _spectral_sum(f, A::AbstractArray, dims, ::FFTPlans) = sum(f, A; dims)
 
-function _spectral_sum(f, A::AbstractArray, dims::Colon, ::rFFTPlans)
-    2 * sum(f, A) - sum(f, selectdim(A, 1, 1:1))
+function _spectral_sum(f, A::AbstractArray, dims::Colon, plan::rFFTPlans)
+    S = 2 * sum(f, A) - sum(f, selectdim(A, 1, 1:1))
+    remove_nyquist = iseven(size(fwd(plan), 1)) && size(A, 1) > 1
+    remove_nyquist ? S - sum(f, selectdim(A, 1, size(A, 1):size(A, 1))) : S
 end
 
-function _spectral_sum(f, A::AbstractArray, dims, ::rFFTPlans)
-    1 in dims ? 2 .* sum(f, A; dims) .- sum(f, selectdim(A, 1, 1:1); dims) : sum(f, A; dims)
+function _spectral_sum(f, A::AbstractArray, dims, plan::rFFTPlans)
+    !(1 in dims) && return sum(f, A; dims)
+    S = 2 .* sum(f, A; dims) .- sum(f, selectdim(A, 1, 1:1); dims)
+    remove_nyquist = iseven(size(fwd(plan), 1)) && size(A, 1) > 1
+    remove_nyquist ? S .- sum(f, selectdim(A, 1, size(A, 1):size(A, 1)); dims) : S
 end
 
 # User interface
