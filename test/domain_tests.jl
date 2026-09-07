@@ -96,7 +96,7 @@ end
 @testset "FFT Round Trip" for a_domain in Domain_set
     # Create a random physical field on the correct memory type
     T = Advectra.get_precision(a_domain)
-    phys_in = rand(T, size(a_domain)...) |> array_wrapper(d)
+    phys_in = rand(T, size(a_domain)...) |> array_wrapper(a_domain)
 
     fwd = Advectra.get_fwd(a_domain)
     bwd = Advectra.get_bwd(a_domain)
