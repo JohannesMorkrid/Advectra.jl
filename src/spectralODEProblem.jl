@@ -77,7 +77,7 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,
         dt = convert(eltype(domain), dt)
 
         # Convert parameters to domain precision
-        p = convert_parameters(get_precision(domain), p)
+        p = convert_parameters(eltype(domain), p)
 
         # Returns a NamedTuple with `SpectralOperator`s
         ops = build_operators(domain; operators, aliases, additional_operators, diagnostics,

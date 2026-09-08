@@ -353,6 +353,7 @@ const get_fwd = fwd_plan
 const get_bwd = bwd_plan
 
 get_transform_plans(domain::AbstractDomain) = domain.transforms
+get_precision(domain::AbstractDomain) = eltype(domain)
 
 """
     array_wrapper(::Type{<:AbstractArray})
