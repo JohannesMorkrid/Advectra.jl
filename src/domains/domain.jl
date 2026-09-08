@@ -362,7 +362,7 @@ get_precision(domain::AbstractDomain) = eltype(domain)
 Return the bare array "MemoryType" (`Array`, `CuArray`, ...) of a concrete array type, \
 or of `domain`'s `kx`/`ky` array type. 
 """
-array_wrapper(::Type{A}) where {A<:AbstractArray} = Core.typename(A).wrapper
+array_wrapper(::Type{A}) where {A<:AbstractArray} = Base.typename(A).wrapper
 array_wrapper(domain::AbstractDomain) = array_wrapper(typeof(domain.kx))
 
 """
