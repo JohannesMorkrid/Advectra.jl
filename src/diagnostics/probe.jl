@@ -26,7 +26,7 @@ function probe_field(field::AbstractArray, domain::AbstractDomain, position)
 end
 
 function probe_field(field::AbstractInterpolation, domain::AbstractDomain,
-    position::NTuple{2,Number})
+                     position::NTuple{2,Number})
     field(position[2], position[1])
 end
 
@@ -42,8 +42,8 @@ end
   The method is dispatched on the `interpolation` method.
 """
 function probe_field(field::AbstractArray, domain::AbstractDomain,
-    positions::AbstractArray{<:Tuple},
-    interpolation::Nothing=nothing)
+                     positions::AbstractArray{<:Tuple},
+                     interpolation::Nothing=nothing)
     data = [probe_field(field, domain, position) for position in positions]
 
     # Return either the one point, or the array
@@ -54,8 +54,8 @@ end
 
 # Uses pre-computed indices
 function probe_field(field::AbstractArray, domain::AbstractDomain,
-    indices::AbstractArray{<:Integer},
-    interpolation::Nothing=nothing)
+                     indices::AbstractArray{<:Integer},
+                     interpolation::Nothing=nothing)
     data = field[indices]
     # Return either the one point, or the array
     length(data) == 1 ? only(Array(data)) : data
@@ -75,7 +75,7 @@ end
 # function probe_field(field::AbstractGPUArray, domain::AbstractDomain,
 #                      indices::AbstractGPUArray{<:Integer},
 #                      interpolation::Nothing=nothing)
-#     data = zeros(size(indices)) |> memory_type(domain)
+#     data = zeros(size(indices)) |> memory_type(domain, Physical())
 #     probe_field!(data, field, indices)
 
 #     # Return either the one point, or the array
@@ -85,7 +85,7 @@ end
 # --------------------------------- Interpolated Probing -----------------------------------
 
 function probe_field(field::AbstractArray, domain::AbstractDomain, positions::AbstractArray,
-    interpolation::AbstractInterpolation)
+                     interpolation::AbstractInterpolation)
     interpolated = interpolation((domain.y, domain.x), field)
     data = [probe_field(interpolated, domain, position) for position in positions]
     # Return either the one point, or the array
@@ -168,12 +168,12 @@ end
 """
 function prepare_metadata(positions::AbstractArray{<:Tuple}, quantities::AbstractArray)
     return string("Probe at positions: ", join(positions, "; "), ", measuring: ",
-        join(quantities, ", "), ".")
+                  join(quantities, ", "), ".")
 end
 
 function prepare_metadata(positions::AbstractArray{<:Tuple}, quantities::String)
     return string("Probe at positions: ", join(positions, "; "), ", measuring: ",
-        quantities, ".")
+                  quantities, ".")
 end
 
 """
@@ -183,7 +183,7 @@ end
   General build method for probe diagnostics which prepares the positions and metadata.
 """
 function build_probe_diagnostic(; name, method, positions, domain, quantities,
-    assumes_spectral_state=false, interpolation=nothing)
+                                assumes_spectral_state=false, interpolation=nothing)
     # Bound and type checking
     positions = prepare_positions(positions, domain)
     # Can pre-compute indices if not using interpolation
@@ -193,11 +193,11 @@ function build_probe_diagnostic(; name, method, positions, domain, quantities,
         args = (positions,)
     end
     Diagnostic(; name=name,
-        method=method,
-        metadata=prepare_metadata(positions, quantities),
-        assumes_spectral_state=assumes_spectral_state,
-        args=args,
-        kwargs=(; interpolation=interpolation,))
+               method=method,
+               metadata=prepare_metadata(positions, quantities),
+               assumes_spectral_state=assumes_spectral_state,
+               args=args,
+               kwargs=(; interpolation=interpolation,))
 end
 
 # ------------------------------------------------------------------------------------------
@@ -217,13 +217,13 @@ function probe_density(state, prob, time, positions; interpolation=nothing)
 end
 
 function build_diagnostic(::Val{:probe_density}; domain, positions,
-    interpolation=nothing, kwargs...)
+                          interpolation=nothing, kwargs...)
     build_probe_diagnostic(; name="Density probe",
-        method=probe_density,
-        positions=positions,
-        domain=domain,
-        quantities="density",
-        interpolation=interpolation)
+                           method=probe_density,
+                           positions=positions,
+                           domain=domain,
+                           quantities="density",
+                           interpolation=interpolation)
 end
 
 # --------------------------------------- Vorticity ----------------------------------------
@@ -239,13 +239,13 @@ function probe_vorticity(state, prob, time, positions; interpolation=nothing)
 end
 
 function build_diagnostic(::Val{:probe_vorticity}; domain, positions,
-    interpolation=nothing, kwargs...)
+                          interpolation=nothing, kwargs...)
     build_probe_diagnostic(; name="Vorticity probe",
-        method=probe_vorticity,
-        positions=positions,
-        domain=domain,
-        quantities="vorticity",
-        interpolation=interpolation)
+                           method=probe_vorticity,
+                           positions=positions,
+                           domain=domain,
+                           quantities="vorticity",
+                           interpolation=interpolation)
 end
 
 # --------------------------------------- Temperature ----------------------------------------
@@ -261,13 +261,13 @@ function probe_temperature(state, prob, time, positions; interpolation=nothing)
 end
 
 function build_diagnostic(::Val{:probe_temperature}; domain, positions,
-    interpolation=nothing, kwargs...)
+                          interpolation=nothing, kwargs...)
     build_probe_diagnostic(; name="Temperature probe",
-        method=probe_temperature,
-        positions=positions,
-        domain=domain,
-        quantities="temperature",
-        interpolation=interpolation)
+                           method=probe_temperature,
+                           positions=positions,
+                           domain=domain,
+                           quantities="temperature",
+                           interpolation=interpolation)
 end
 
 # --------------------------------------- Potential ----------------------------------------
@@ -283,21 +283,21 @@ function probe_potential(state_hat, prob, time, positions; interpolation=nothing
     slices = eachslice(state_hat; dims=ndims(state_hat))
     n_hat = slices[1]
     Ω_hat = slices[2]
-    ϕ = get_bwd(domain) * solve_phi(n_hat, Ω_hat)
+    ϕ = bwd_plan(domain) * solve_phi(n_hat, Ω_hat)
     probe_field(ϕ, domain, positions, interpolation)
 end
 
 requires_operator(::Val{:probe_potential}; kwargs...) = [OperatorRecipe(:solve_phi)]
 
 function build_diagnostic(::Val{:probe_potential}; domain, positions,
-    interpolation=nothing, kwargs...)
+                          interpolation=nothing, kwargs...)
     build_probe_diagnostic(; name="Phi probe",
-        method=probe_potential,
-        positions=positions,
-        domain=domain,
-        quantities="potential",
-        assumes_spectral_state=true,
-        interpolation=interpolation)
+                           method=probe_potential,
+                           positions=positions,
+                           domain=domain,
+                           quantities="potential",
+                           assumes_spectral_state=true,
+                           interpolation=interpolation)
 end
 
 # ------------------------------------ Radial Velocity -------------------------------------
@@ -315,7 +315,7 @@ function probe_radial_velocity(state, prob, time, positions; interpolation=nothi
     Ω_hat = slices[2]
     ϕ_hat = solve_phi(n_hat, Ω_hat)
     v_x_hat = -diff_y(ϕ_hat)
-    v_x = get_bwd(domain) * v_x_hat
+    v_x = bwd_plan(domain) * v_x_hat
     probe_field(v_x, domain, positions, interpolation)
 end
 
@@ -324,14 +324,14 @@ function requires_operator(::Val{:probe_radial_velocity}; kwargs...)
 end
 
 function build_diagnostic(::Val{:probe_radial_velocity}; domain, positions,
-    interpolation=nothing, kwargs...)
+                          interpolation=nothing, kwargs...)
     build_probe_diagnostic(; name="Radial velocity probe",
-        method=probe_radial_velocity,
-        positions=positions,
-        domain=domain,
-        quantities="radial velocity",
-        assumes_spectral_state=true,
-        interpolation=interpolation)
+                           method=probe_radial_velocity,
+                           positions=positions,
+                           domain=domain,
+                           quantities="radial velocity",
+                           assumes_spectral_state=true,
+                           interpolation=interpolation)
 end
 
 # -------------------------------------- All Fields ----------------------------------------
@@ -354,16 +354,16 @@ function probe_all(state_hat, prob, time, positions; interpolation=nothing)
     v_x_hat = -diff_y(ϕ_hat)
 
     # Cache for transformation
-    cache = zeros(size(domain)) |> memory_type(prob.domain)
+    cache = zeros(size(domain)) |> memory_type(prob.domain, Physical())
 
     # Transform to physical space and probe fields
-    n = mul!(cache, get_bwd(domain), n_hat)
+    n = mul!(cache, bwd_plan(domain), n_hat)
     n_p = probe_field(n, domain, positions, interpolation)
-    Ω = mul!(cache, get_bwd(domain), Ω_hat)
+    Ω = mul!(cache, bwd_plan(domain), Ω_hat)
     Ω_p = probe_field(Ω, domain, positions, interpolation)
-    ϕ = mul!(cache, get_bwd(domain), ϕ_hat)
+    ϕ = mul!(cache, bwd_plan(domain), ϕ_hat)
     ϕ_p = probe_field(ϕ, domain, positions, interpolation)
-    v_x = mul!(cache, get_bwd(domain), v_x_hat)
+    v_x = mul!(cache, bwd_plan(domain), v_x_hat)
     v_x_p = probe_field(v_x, domain, positions, interpolation)
 
     #Combine fields for output (The last field is the flux Γ=nvₓ)
@@ -375,16 +375,16 @@ function requires_operator(::Val{:probe_all}; kwargs...)
 end
 
 function build_diagnostic(::Val{:probe_all}; domain, positions, interpolation=nothing,
-    kwargs...)
+                          kwargs...)
     build_probe_diagnostic(; name="All probe",
-        method=probe_all,
-        positions=positions,
-        domain=domain,
-        quantities=["density",
-            "vorticity",
-            "potential",
-            "radial velocity",
-            "radial flux"],
-        assumes_spectral_state=true,
-        interpolation=interpolation)
+                           method=probe_all,
+                           positions=positions,
+                           domain=domain,
+                           quantities=["density",
+                               "vorticity",
+                               "potential",
+                               "radial velocity",
+                               "radial flux"],
+                           assumes_spectral_state=true,
+                           interpolation=interpolation)
 end

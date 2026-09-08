@@ -18,10 +18,10 @@ l = 0.01
 using Plots
 surface(Ω)
 
-Ω_hat = get_fwd(domain) * Ω
+Ω_hat = fwd_plan(domain) * Ω
 solve_phi = Advectra.build_operator(Val(:solve_phi), domain)
 ϕ_hat = solve_phi(Ω_hat)
-ϕ = get_bwd(domain) * ϕ_hat
+ϕ = bwd_plan(domain) * ϕ_hat
 #Remove the value at boundary since should be zero for periodicity
 ϕ_n = ϕ .- ϕ[1]
 

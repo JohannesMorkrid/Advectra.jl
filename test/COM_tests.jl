@@ -8,7 +8,7 @@ import Advectra: build_diagnostic, build_operator
 
 # Minimal construction
 domain = Domain(256, 256; MemoryType=CuArray)
-ic = initial_condition(random_crossphased, domain) |> Advectra.memory_type(domain)
+ic = initial_condition(random_crossphased, domain) |> memory_type(domain, Physical())
 dt = 0.0001
 
 # Emulates SpectralODEProblem
@@ -16,7 +16,7 @@ prob = (; domain=domain, dt=dt)
 
 COM_diagnostic = build_diagnostic(Val(:radial_COM))
 COM_diagnostic(ic, prob, 0.0)
-ic = initial_condition(random_crossphased, domain) |> Advectra.memory_type(domain)
+ic = initial_condition(random_crossphased, domain) |> memory_type(domain, Physical())
 COM_diagnostic(ic, prob, 1.0)
 
 """

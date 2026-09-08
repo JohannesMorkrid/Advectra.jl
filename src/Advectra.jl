@@ -1,18 +1,19 @@
 module Advectra
 
 using FFTW, HDF5, H5Zblosc, LinearAlgebra, LaTeXStrings, MuladdMacro, UnPack, Base.Threads,
-    Dates, GPUArrays, Adapt, Statistics
+      Dates, GPUArrays, Adapt, Statistics
 export @unpack
 
 # TODO make ext
 using Plots
 
 include("operators/fftutilities.jl")
-export spectral_transform, spectral_transform!, get_fwd, get_bwd
+export spectral_transform, spectral_transform!, fwd_plan, bwd_plan
 
 include("domains/domain.jl")
-export Domain, wave_vectors, get_points, spectral_size, spectral_length, get_transform_plans,
-    array_wrapper, memory_type, allocate, allocate_physical, allocate_spectral, area, evaluate
+export Domain, wave_vectors, get_points, spectral_size, spectral_length,
+       get_transform_plans, array_wrapper, memory_type, allocate, allocate_physical,
+       allocate_spectral, area, evaluate, Physical, Spectral
 
 include("operators/spectralOperators.jl")
 export OperatorRecipe, build_operators, build_operator # TODO perhaps remove and swap with @op
@@ -22,17 +23,18 @@ export OperatorRecipe, build_operators, build_operator # TODO perhaps remove and
 using ProgressMeter, Interpolations
 include("diagnostics/diagnostics.jl")
 export radial_density_profile, poloidal_density_profile, radial_vorticity_profile,
-    poloidal_vorticity_profile, poloidal_vorticity_profile, @diagnostics, DiagnosticRecipe
+       poloidal_vorticity_profile, poloidal_vorticity_profile, @diagnostics,
+       DiagnosticRecipe
 export cfl, radial_COM, plot_density, plot_vorticity, plot_potential,
-    potential_energy_integral, kinetic_energy_integral, zonal_kinetic_energy_integral,
-    streamer_kinetic_energy_integral, total_energy_integral, enstrophy_energy_integral,
-    flux_magnitude, resistive_dissipation_integral, potential_dissipation_integral,
-    kinetic_dissipation_integral, viscous_dissipation_integral,
-    enstrophy_dissipation_integral, energy_evolution_integral,
-    enstrophy_evolution_integral, radial_flux, poloidal_flux, probe_density,
-    probe_vorticity, probe_potential, probe_radial_velocity, probe_all, progress,
-    get_modes, get_log_modes, potential_energy_spectrum, flux_spectrum,
-    kinetic_energy_spectrum, enstrophy_spectrum, electrostatic_potential_spectrum
+       potential_energy_integral, kinetic_energy_integral, zonal_kinetic_energy_integral,
+       streamer_kinetic_energy_integral, total_energy_integral, enstrophy_energy_integral,
+       flux_magnitude, resistive_dissipation_integral, potential_dissipation_integral,
+       kinetic_dissipation_integral, viscous_dissipation_integral,
+       enstrophy_dissipation_integral, energy_evolution_integral,
+       enstrophy_evolution_integral, radial_flux, poloidal_flux, probe_density,
+       probe_vorticity, probe_potential, probe_radial_velocity, probe_all, progress,
+       get_modes, get_log_modes, potential_energy_spectrum, flux_spectrum,
+       kinetic_energy_spectrum, enstrophy_spectrum, electrostatic_potential_spectrum
 
 include("spectralODEProblem.jl")
 export SpectralODEProblem
@@ -48,9 +50,9 @@ export spectral_solve
 
 include("utilities.jl")
 export initial_condition, @nobroadcast, gaussian, log_gaussian, gaussian_x, gaussian_y,
-    sinusoidal, sinusoidal_x, sinusoidal_y, quadratic_y, exponential_x, white_noise,
-    random_phase, random_crossphased, isolated_blob, isolated_temperature_blob,
-    frequencies, remove_zonal_modes!, remove_streamer_modes!, remove_asymmetric_modes!,
-    remove_nyquist_modes!, remove_nothing!, add_constant!, add_constant, send_mail,
-    logspace, spectral_sum
+       sinusoidal, sinusoidal_x, sinusoidal_y, quadratic_y, exponential_x, white_noise,
+       random_phase, random_crossphased, isolated_blob, isolated_temperature_blob,
+       frequencies, remove_zonal_modes!, remove_streamer_modes!, remove_asymmetric_modes!,
+       remove_nyquist_modes!, remove_nothing!, add_constant!, add_constant, send_mail,
+       logspace, spectral_sum
 end

@@ -98,8 +98,8 @@ end
     T = Advectra.get_precision(a_domain)
     phys_in = rand(T, size(a_domain)...) |> array_wrapper(a_domain)
 
-    fwd = Advectra.get_fwd(a_domain)
-    bwd = Advectra.get_bwd(a_domain)
+    fwd = Advectra.fwd_plan(a_domain)
+    bwd = Advectra.bwd_plan(a_domain)
 
     # Physical -> Spectral -> Physical
     spec = fwd * phys_in
@@ -127,7 +127,7 @@ end
             @test eltype(d.x) === T
             @test eltype(d.kx) === T
 
-            fwd = Advectra.get_fwd(d)
+            fwd = Advectra.fwd_plan(d)
 
             # If it's a real transform, plan expects T (Float)
             # If it's a complex transform, plan expects Complex{T}

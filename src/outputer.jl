@@ -779,7 +779,7 @@ function sample_diagnostic!(output, diagnostic, idx::Integer, state, prob, time)
     # Check if diagnostic assumes physical field and transform if not yet done
     if !diagnostic.assumes_spectral_state && !output.transformed
         # Transform state (updates state_buffer)
-        transform_state!(output, state, get_bwd(prob.domain))
+        transform_state!(output, state, bwd_plan(prob.domain))
     end
 
     # Apply diagnostic to the correct input (either physical or spectral state)

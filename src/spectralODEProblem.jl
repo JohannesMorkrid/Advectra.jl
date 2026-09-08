@@ -23,11 +23,11 @@ abstract type AbstractODEProblem{isinplace} end
    `kwargs` can be stored in the struct, however these are currently unused.
 """
 mutable struct SpectralODEProblem{LType<:Function,NType<:Function,
-    u0Type<:AbstractArray,u0_hatType<:AbstractArray,
-    D<:AbstractDomain,tType,pType,
-    operatorsType<:NamedTuple,
-    diagnosticRecipesType<:Vector,N<:Number,
-    RMType<:Function,K,iip} <: AbstractODEProblem{iip}
+                                  u0Type<:AbstractArray,u0_hatType<:AbstractArray,
+                                  D<:AbstractDomain,tType,pType,
+                                  operatorsType<:NamedTuple,
+                                  diagnosticRecipesType<:Vector,N<:Number,
+                                  RMType<:Function,K,iip} <: AbstractODEProblem{iip}
     L::LType
     N::NType
     u0::u0Type
@@ -43,26 +43,26 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,
     kwargs::K
 
     function SpectralODEProblem(NonLinear::Function, u0, domain::AbstractDomain, tspan;
-        p=NullParameters(), dt=0.01,
-        remove_modes::Function=remove_nothing!, kwargs...)
+                                p=NullParameters(), dt=0.01,
+                                remove_modes::Function=remove_nothing!, kwargs...)
 
         # If no linear operator given, assume there is non and match signature
         isinplace(NonLinear) isa Val{true} ? L(du, u, operators, p, t) = (du .= zero(u)) :
         L(u, operators, p, t) = zero(u)
 
         SpectralODEProblem(L, NonLinear, u0, domain, tspan; p=p, dt=dt,
-            remove_modes=remove_modes, kwargs...)
+                           remove_modes=remove_modes, kwargs...)
     end
 
     function SpectralODEProblem(Linear::Function, NonLinear::Function, u0,
-        domain::AbstractDomain, tspan;
-        p=NullParameters(), dt::Number=0.01,
-        operators::Symbol=:default,
-        aliases::Vector{Pair{Symbol,Symbol}}=Pair{Symbol,Symbol}[],
-        additional_operators::Vector{<:OperatorRecipe}=OperatorRecipe[],
-        remove_modes::Function=remove_nothing!,
-        diagnostics::Vector{<:DiagnosticRecipe}=DiagnosticRecipe[],
-        kwargs...)
+                                domain::AbstractDomain, tspan;
+                                p=NullParameters(), dt::Number=0.01,
+                                operators::Symbol=:default,
+                                aliases::Vector{Pair{Symbol,Symbol}}=Pair{Symbol,Symbol}[],
+                                additional_operators::Vector{<:OperatorRecipe}=OperatorRecipe[],
+                                remove_modes::Function=remove_nothing!,
+                                diagnostics::Vector{<:DiagnosticRecipe}=DiagnosticRecipe[],
+                                kwargs...)
 
         # Prepare data structures
         u0 = prepare_initial_condition(u0, domain)
@@ -81,7 +81,7 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,
 
         # Returns a NamedTuple with `SpectralOperator`s
         ops = build_operators(domain; operators, aliases, additional_operators, diagnostics,
-            kwargs...)
+                              kwargs...)
 
         # Makes the rhs follow the signature used by SciML
         L, N = prepare_functions(Linear, NonLinear, ops)
@@ -89,8 +89,8 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,
         new{typeof(L),typeof(N),typeof(u0),typeof(u0_hat),typeof(domain),typeof(tspan),
             typeof(p),typeof(ops),typeof(diagnostics),typeof(dt),typeof(remove_modes),
             typeof(kwargs),isinplace(Linear, NonLinear)}(L, N, u0, u0_hat, domain, tspan, p,
-            ops, diagnostics, dt, remove_modes,
-            kwargs)
+                                                         ops, diagnostics, dt, remove_modes,
+                                                         kwargs)
     end
 end
 
@@ -111,7 +111,7 @@ end
 
 """
 """
-prepare_initial_condition(u0, domain::Domain) = u0 |> memory_type(domain)
+prepare_initial_condition(u0, domain::Domain) = u0 |> memory_type(domain, Physical())
 
 # -------------------------- Spectral Coefficient Initialization ---------------------------
 
@@ -122,7 +122,7 @@ function prepare_spectral_coefficients(u0, domain::Domain)
     u0_hat = allocate_coefficients(u0, domain)
 
     # Compute spectral initial conditions
-    spectral_transform!(u0_hat, get_fwd(domain), u0)
+    spectral_transform!(u0_hat, fwd_plan(domain), u0)
 
     return u0_hat
 end
@@ -138,9 +138,10 @@ allocate_coefficients(u0, domain::Domain) = _allocate_coefficients(u0, domain)
 # TODO perhaps clean up this logic
 function _allocate_coefficients(u0::AbstractArray{<:Number}, domain::Domain)
     # Allocate array for spectral modes 
-    sz = size(get_bwd(domain))
+    sz = size(bwd_plan(domain))
     allocation_size = (sz..., size(u0)[(length(sz)+1):end]...)
-    return fill!(allocate_spectral(domain; dims=allocation_size), zero(spectral_eltype(domain)))
+    return fill!(allocate_spectral(domain; dims=allocation_size),
+                 zero(spectral_eltype(domain)))
 end
 
 function _allocate_coefficients(u0::AbstractArray{<:AbstractArray}, domain::Domain)
@@ -168,8 +169,8 @@ convert_parameters(::Type{T}, x) where {T} = x
   `required_operators` by the `diagnostics` to it.
 """
 function prepare_operator_recipes(operators::Symbol,
-    additional_operators::Vector{<:OperatorRecipe},
-    diagnostics::Vector{<:DiagnosticRecipe})
+                                  additional_operators::Vector{<:OperatorRecipe},
+                                  diagnostics::Vector{<:DiagnosticRecipe})
     # Determine operators trough switches
     recipes = get_operator_recipes(operators)
     # Determine which operators are required by the diagnostics
@@ -211,10 +212,10 @@ function add_aliases!(operators, aliases, cache)
 end
 
 function build_operators(domain::AbstractDomain; operators::Symbol=:default,
-    aliases::Vector{Pair{Symbol,Symbol}}=Pair{Symbol,Symbol}[],
-    additional_operators::Vector{<:OperatorRecipe}=OperatorRecipe[],
-    diagnostics::Vector{<:DiagnosticRecipe}=DiagnosticRecipe[],
-    problem_kwargs...)
+                         aliases::Vector{Pair{Symbol,Symbol}}=Pair{Symbol,Symbol}[],
+                         additional_operators::Vector{<:OperatorRecipe}=OperatorRecipe[],
+                         diagnostics::Vector{<:DiagnosticRecipe}=DiagnosticRecipe[],
+                         problem_kwargs...)
     # Collects all recipes needed to be built
     recipes = prepare_operator_recipes(operators, additional_operators, diagnostics)
 
@@ -223,8 +224,8 @@ function build_operators(domain::AbstractDomain; operators::Symbol=:default,
 
     # Construct NamedTuple
     spectral_operators = (;
-        [recipe.alias => ensure!(cache, recipe, domain, problem_kwargs)
-         for recipe in recipes]...)
+                          [recipe.alias => ensure!(cache, recipe, domain, problem_kwargs)
+                           for recipe in recipes]...)
 
     # Sort out aliases
     spectral_operators = add_aliases!(spectral_operators, aliases, cache)
@@ -237,8 +238,8 @@ end
 spectral_size(prob::SpectralODEProblem) = size(prob.u0_hat)
 
 get_precision(prob::SpectralODEProblem) = get_precision(prob.domain)
-get_fwd(prob::SpectralODEProblem) = get_fwd(prob.domain)
-get_bwd(prob::SpectralODEProblem) = get_bwd(prob.domain)
+fwd_plan(prob::SpectralODEProblem) = fwd_plan(prob.domain)
+bwd_plan(prob::SpectralODEProblem) = bwd_plan(prob.domain)
 
 function get_kwargs(prob::SpectralODEProblem)
     (; [field => getfield(prob, field) for field in fieldnames(SpectralODEProblem)]...)
@@ -290,7 +291,7 @@ get_nonlinear_operator(prob::SpectralODEProblem) = prob.N.NonLinear
 
 function Base.show(io::IO, m::MIME"text/plain", prob::SpectralODEProblem)
     print(io, nameof(typeof(prob)), "(", nameof(prob.L), ",", nameof(prob.N), ";dt=",
-        prob.dt)
+          prob.dt)
     typeof(prob.p) == NullParameters ? nothing : print(io, ",p=", prob.p)
     println(io, "):")
     println(io, "in-place: ", isinplace(prob) isa Val{true})

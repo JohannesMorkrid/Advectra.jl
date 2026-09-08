@@ -16,10 +16,9 @@ Domain_set = [d1, d2, d3]
 # ------------------------------------------------------------------------------
 
 @testset "Spectral Operator Tests" begin
-
     @testset "First Derivatives (Accuracy) - Domain: $(size(d))" for d in Domain_set
         T = Advectra.get_precision(d)
-        fwd, bwd = Advectra.get_fwd(d), Advectra.get_bwd(d)
+        fwd, bwd = Advectra.fwd_plan(d), Advectra.bwd_plan(d)
 
         m, n = 2, 3
         k0x = 2π / d.Lx
@@ -59,7 +58,7 @@ Domain_set = [d1, d2, d3]
 
     @testset "GradDotGrad Operator - Domain: $(size(d))" for d in Domain_set
         T = Advectra.get_precision(d)
-        fwd, bwd = Advectra.get_fwd(d), Advectra.get_bwd(d)
+        fwd, bwd = Advectra.fwd_plan(d), Advectra.bwd_plan(d)
 
         diff_x = build_operator(Val(:diff_x), d)
         diff_y = build_operator(Val(:diff_y), d)
@@ -68,7 +67,7 @@ Domain_set = [d1, d2, d3]
         try
             q_term = build_operator(Val(:quadratic_term), d)
             gdg = build_operator(Val(:grad_dot_grad), d;
-                diff_x=diff_x, diff_y=diff_y, quadratic_term=q_term)
+                                 diff_x=diff_x, diff_y=diff_y, quadratic_term=q_term)
 
             # Test with simple smooth fields
             u_phys = @. cos(2π * d.x' / d.Lx) + 0*d.y

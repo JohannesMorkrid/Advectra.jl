@@ -4,7 +4,7 @@
 
 using Test
 using Advectra
-import Advectra: plot_field, build_diagnostic, build_operator, get_fwd
+import Advectra: plot_field, build_diagnostic, build_operator, fwd_plan
 
 @testset "Display Diagnostics" begin
     # Minimal construction
@@ -22,7 +22,7 @@ import Advectra: plot_field, build_diagnostic, build_operator, get_fwd
     for (domain_name, a_domain) in Domain_set
         println("Testing display diagnostics for domain: ", domain_name)
         domain = a_domain
-        ic = initial_condition(isolated_blob, domain) |> Advectra.memory_type(domain)
+        ic = initial_condition(isolated_blob, domain) |> memory_type(domain, Physical())
         dt = 0.0001
         prob = (; domain=domain,
                 operators=(; solve_phi=build_operator(Val(:solve_phi), domain)), dt)
@@ -59,7 +59,7 @@ import Advectra: plot_field, build_diagnostic, build_operator, get_fwd
 
             # Potential
             display_potential = build_diagnostic(Val(:plot_potential); dt=dt)
-            ic_hat = cat(get_fwd(domain) * ic[:, :, 1], get_fwd(domain) * ic[:, :, 1];
+            ic_hat = cat(fwd_plan(domain) * ic[:, :, 1], fwd_plan(domain) * ic[:, :, 1];
                          dims=3)
             @testset "Potential Display" begin
                 @test display_potential.name == "Display potential"
@@ -75,12 +75,12 @@ import Advectra: plot_field, build_diagnostic, build_operator, get_fwd
 
         # Test 2: Test that the number of significant digits works
         @testset "Significant Digits Handling" for dt_test in [
-            0.1,
-            0.01,
-            0.001,
-            0.00023,
-            0.0004567
-        ]
+                                                       0.1,
+                                                       0.01,
+                                                       0.001,
+                                                       0.00023,
+                                                       0.0004567
+                                                   ]
             digits_expected = ceil(Int, -log10(dt_test))
             display_density = build_diagnostic(Val(:plot_density); dt=dt_test)
             @test display_density.kwargs[:digits] == digits_expected
