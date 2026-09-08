@@ -215,7 +215,7 @@ Generate random noise from randomly phased spectral modes, with zonal and stream
 - `ndims`: Number of fields (default `1`)
 """
 @nobroadcast function random_phase(domain::AbstractDomain; value=10^-6, ndims=1,
-    include_zonal=false, include_streamer=false)
+                                   include_zonal=false, include_streamer=false)
     θ = 2π * rand(spectral_size(domain)..., (ndims == 1 ? () : (ndims,))...)
     u_hat = value .* exp.(im * θ) |> array_wrapper(domain)
     include_zonal || (selectdim(u_hat, 1, 1) .= 0.0)
@@ -243,7 +243,7 @@ and the vorticity is derived from the potential via:
 - `cross_phase`: Phase offset between ϕₖ and nₖ modes (default `π/2`)
 """
 @nobroadcast function random_crossphased(domain::AbstractDomain; include_streamer=false,
-    include_zonal=false, value=1e-6, cross_phase=π / 2)
+                                         include_zonal=false, value=1e-6, cross_phase=π / 2)
     θ = 2π * rand(spectral_size(domain)...) |> array_wrapper(domain)
     ϕ_hat = value .* exp.(im * θ)
     n_hat = ϕ_hat .* exp(im * cross_phase)
@@ -304,7 +304,7 @@ logarithmic scale. Additional keyword arguments are passed to the underlying
 - `kwargs...`: Passed to [`gaussian`](@ref) or [`log_gaussian`](@ref), typically `A`, `B`, `l`
 """
 @nobroadcast function isolated_temperature_blob(domain::AbstractDomain; ndims=3,
-    density::Symbol=:lin, kwargs...)
+                                                density::Symbol=:lin, kwargs...)
     isolated_temperature_blob(domain, Val(density); ndims, kwargs...)
 end
 
