@@ -73,11 +73,11 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,
 
         # Handle time related things
         length(tspan) != 2 ? throw("tspan should have exactly two elements") : nothing
-        tspan = convert.(domain.precision, promote(first(tspan), last(tspan)))
-        dt = convert(domain.precision, dt)
+        tspan = convert.(eltype(domain), promote(first(tspan), last(tspan)))
+        dt = convert(eltype(domain), dt)
 
         # Convert parameters to domain precision
-        p = convert_parameters(get_precision(domain), p)
+        p = convert_parameters(eltype(domain), p)
 
         # Returns a NamedTuple with `SpectralOperator`s
         ops = build_operators(domain; operators, aliases, additional_operators, diagnostics,
@@ -111,10 +111,7 @@ end
 
 """
 """
-function prepare_initial_condition(u0, domain::Domain)
-    # Transform to the correct MemoryType for physical space
-    u0 |> domain.MemoryType{eltype(fwd(domain))}
-end
+prepare_initial_condition(u0, domain::Domain) = u0 |> memory_type(domain, Physical())
 
 # -------------------------- Spectral Coefficient Initialization ---------------------------
 
@@ -125,7 +122,7 @@ function prepare_spectral_coefficients(u0, domain::Domain)
     u0_hat = allocate_coefficients(u0, domain)
 
     # Compute spectral initial conditions
-    spectral_transform!(u0_hat, get_fwd(domain), u0)
+    spectral_transform!(u0_hat, fwd_plan(domain), u0)
 
     return u0_hat
 end
@@ -141,9 +138,10 @@ allocate_coefficients(u0, domain::Domain) = _allocate_coefficients(u0, domain)
 # TODO perhaps clean up this logic
 function _allocate_coefficients(u0::AbstractArray{<:Number}, domain::Domain)
     # Allocate array for spectral modes 
-    sz = size(get_bwd(domain))
+    sz = size(bwd_plan(domain))
     allocation_size = (sz..., size(u0)[(length(sz)+1):end]...)
-    return zeros(eltype(get_bwd(domain)), allocation_size) |> domain.MemoryType
+    return fill!(allocate_spectral(domain; dims=allocation_size),
+                 zero(spectral_eltype(domain)))
 end
 
 function _allocate_coefficients(u0::AbstractArray{<:AbstractArray}, domain::Domain)
@@ -239,9 +237,9 @@ end
 
 spectral_size(prob::SpectralODEProblem) = size(prob.u0_hat)
 
-get_precision(prob::SpectralODEProblem) = prob.domain.precision
-get_fwd(prob::SpectralODEProblem) = get_fwd(prob.domain)
-get_bwd(prob::SpectralODEProblem) = get_bwd(prob.domain)
+get_precision(prob::SpectralODEProblem) = get_precision(prob.domain)
+fwd_plan(prob::SpectralODEProblem) = fwd_plan(prob.domain)
+bwd_plan(prob::SpectralODEProblem) = bwd_plan(prob.domain)
 
 function get_kwargs(prob::SpectralODEProblem)
     (; [field => getfield(prob, field) for field in fieldnames(SpectralODEProblem)]...)

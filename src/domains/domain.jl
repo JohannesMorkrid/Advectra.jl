@@ -1,6 +1,13 @@
 # ------------------------------------- Domain ---------------------------------------------
 
-abstract type AbstractDomain end
+abstract type AbstractDomain{T<:Number} end
+
+"""
+    eltype(::Type{<:AbstractDomain{T}}) where {T}
+
+Return the physical-space element type `T`
+"""
+Base.eltype(::Type{<:AbstractDomain{T}}) where {T} = T
 
 """
 Two dimensional `Domain` assuming bi-spectral boundary conditions, equiped with \
@@ -48,7 +55,7 @@ In addition the `Domain` store info about the [`wave_vectors`]() associated with
 used to configure transform plans. `Array` is used by default but all `<:AbstractArray` \
 types should be supported as long as the corresponding `MemoryType` package is loaded.
 - `precision`: precision `Type` used in numerical calculations, also applies to precision of \
-type and output. Defaults to `Float64`. Should be a numerical `DataType`.
+type and output. Defaults to `Float64`. Must be a numerical `DataType`.
 - `real_transform`: boolean flag to tell the program whether or not to use `rfft` and `irfft` \
 methods to transform between physical and spectral space. This halves the number of spectral \
 coefficient needed to be stored. Defaults to `true`.
@@ -79,35 +86,33 @@ Domain(Nx:128, Ny:256, Lx:1.0, Ly:2.0, real_transform:true, dealiased:true, Memo
 !!! warning
     Restricted to 2D for the time being.
 """
-struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,
-              KY<:AbstractArray,TP<:AbstractTransformPlans,
-              T<:AbstractFloat} <: AbstractDomain
+struct Domain{T<:Number,
+              V<:AbstractVector{T},
+              TP<:AbstractTransformPlans} <: AbstractDomain{T}
     Nx::Int
     Ny::Int
     Lx::T
     Ly::T
     dx::T
     dy::T
-    x::X
-    y::Y
-    kx::KX
-    ky::KY
+    x::LinRange{T}
+    y::LinRange{T}
+    kx::V
+    ky::V
     real_transform::Bool
     dealiased::Bool
     transforms::TP
-    MemoryType::Type
-    precision::DataType
 
     Domain(N::Integer; L::Number=1, kwargs...) = Domain(N, N; Lx=L, Ly=L, kwargs...)
     function Domain(Nx::Integer, Ny::Integer;
-                    Lx::Number=1,
-                    Ly::Number=1,
+                    Lx::Number=1.0,
+                    Ly::Number=1.0,
                     MemoryType::Type{<:AbstractArray}=Array,
                     precision::DataType=Float64,
                     real_transform::Bool=true,
                     dealiased::Bool=true,
-                    x0::Number=-Lx / 2,
-                    y0::Number=-Ly / 2)
+                    x0::Number=(-Lx / 2),
+                    y0::Number=(-Ly / 2))
 
         # Ensure MemoryType is not parameterized
         if MemoryType.var.name != :T
@@ -128,16 +133,16 @@ struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,
         x = LinRange{precision}(x0, x0 + Lx - dx, Nx)
         y = LinRange{precision}(y0, y0 + Ly - dy, Ny)
 
-        # Prepare frequencies
+        # Prepare frequencies (kx, ky always share one concrete array type)
         kx, ky = prepare_frequencies(Nx, Ny, dx, dy, MemoryType, precision, real_transform)
 
         # Prepare transform plans
         transform_plans = prepare_transform_plans(Nx, Ny, MemoryType, precision,
                                                   real_transform)
 
-        new{typeof(x),typeof(y),typeof(kx),typeof(ky),typeof(transform_plans),
-            precision}(Nx, Ny, Lx, Ly, dx, dy, x, y, kx, ky, real_transform, dealiased,
-                       transform_plans, MemoryType, precision)
+        new{precision,typeof(kx),typeof(transform_plans)}(Nx, Ny, Lx, Ly, dx, dy, x, y,
+                                                          kx, ky, real_transform, dealiased,
+                                                          transform_plans)
     end
 end
 
@@ -253,15 +258,16 @@ wave_vectors(domain::Domain) = (domain.ky, domain.kx)
 
 Return the domain specific keyword arguments, depending on the type of AbstractDomain.
 """
-domain_kwargs(domain::Domain) = (; real_transform=domain.real_transform,
-                                 dealiased=domain.dealiased)
+function domain_kwargs(domain::Domain)
+    (; real_transform=domain.real_transform, dealiased=domain.dealiased)
+end
 
 """
     spectral_size(domain::AbstractDomain)
 
 Return a tuple containing the size of the spectral coefficient Array (size in spectral space).
 """
-spectral_size(domain::AbstractDomain) = size(get_bwd(domain))
+spectral_size(domain::AbstractDomain) = size(bwd_plan(domain))
 
 """
     spectral_length(domain::AbstractDomain)
@@ -269,6 +275,29 @@ spectral_size(domain::AbstractDomain) = size(get_bwd(domain))
 Return the number of spectral coefficients. (length in spectral space).
 """
 spectral_length(domain::AbstractDomain) = prod(spectral_size(domain))
+
+"""
+    physical_eltype(domain::AbstractDomain)
+
+Return the eltype physical-space arrays actually need. This is **not** always \
+`eltype(domain)` — for a real transform (`rfft`/`irfft`) it is, but for a full complex \
+transform (`fft`/`ifft`) the physical field itself is complex-valued, so this is \
+`Complex{eltype(domain)}` instead. Derived directly from the forward plan's own declared \
+eltype (`AbstractFFTs.Plan{T}` already parametrizes on the type it operates on), so this is \
+correct for whichever kind of plan `domain` was built with, with no `if real_transform` \
+branching needed here.
+"""
+physical_eltype(domain::AbstractDomain) = eltype(fwd_plan(domain))
+
+"""
+    spectral_eltype(domain::AbstractDomain)
+
+Return the spectral-space eltype. Always `Complex{eltype(domain)}` in practice, but — for \
+the same reason as [`physical_eltype`](@ref) — derived from the inverse plan's own declared \
+eltype rather than hardcoded, mirroring how [`spectral_size`](@ref) already derives shape \
+from `bwd_plan(domain)`.
+"""
+spectral_eltype(domain::AbstractDomain) = eltype(bwd_plan(domain))
 
 """
     area(domain::AbstractDomain)
@@ -284,14 +313,139 @@ Compute the differential area of the domain. By default use prod(differential_ar
 """
 differential_area(domain::AbstractDomain) = prod(differential_elements(domain))
 
+"""
+    Representation
+
+Abstract trait describing which space an array lives in: [`Physical`](@ref) or \
+[`Spectral`](@ref). Passed to [`allocate`](@ref)/[`memory_type`](@ref) to select eltype \
+and default shape.
+"""
+abstract type Representation end
+struct Physical <: Representation end
+struct Spectral <: Representation end
+
 # Getters
+
+"""
+    fwd_plan(domain::AbstractDomain)
+    fwd_plan(transform_plans::AbstractTransformPlans)
+
+Return the forward transform plan.
+"""
+fwd_plan(domain::AbstractDomain) = fwd_plan(get_transform_plans(domain))
+
+"""
+    bwd_plan(domain::AbstractDomain)
+    bwd_plan(transform_plans::AbstractTransformPlans)
+
+Return the backward transform plan (FFTW's own terminology for the inverse transform).
+"""
+bwd_plan(domain::AbstractDomain) = bwd_plan(get_transform_plans(domain))
+
+"""
+    get_fwd(x)
+    get_bwd(x)
+
+Aliases for [`fwd_plan`](@ref)/[`bwd_plan`](@ref), kept for existing call sites. Prefer \
+`fwd_plan`/`bwd_plan` in new code.
+"""
+const get_fwd = fwd_plan
+const get_bwd = bwd_plan
+
 get_transform_plans(domain::AbstractDomain) = domain.transforms
-get_fwd(domain::AbstractDomain) = get_fwd(get_transform_plans(domain))
-get_bwd(domain::AbstractDomain) = get_bwd(get_transform_plans(domain))
-get_precision(domain::AbstractDomain) = domain.precision
-memory_type(domain::AbstractDomain) = domain.MemoryType{domain.precision}
+get_precision(domain::AbstractDomain) = eltype(domain)
+
+"""
+    array_wrapper(::Type{<:AbstractArray})
+    array_wrapper(domain::AbstractDomain)
+
+Return the bare array "MemoryType" (`Array`, `CuArray`, ...) of a concrete array type, \
+or of `domain`'s `kx`/`ky` array type. 
+"""
+array_wrapper(::Type{A}) where {A<:AbstractArray} = A.name.wrapper
+array_wrapper(domain::AbstractDomain) = array_wrapper(typeof(domain.kx))
+
+"""
+    memory_type(domain::AbstractDomain)
+    memory_type(domain::AbstractDomain, ::Physical)
+    memory_type(domain::AbstractDomain, ::Spectral)
+
+With no `Representation`, return the concrete memory type `domain`'s `x`/`y`/`kx`/`ky` live \
+in. With `Physical()`/`Spectral()`, return the concrete memory type an actual field array in \
+that space needs — these can differ from the no-argument form, since [`physical_eltype`](@ref) \
+isn't always `eltype(domain)`.
+"""
+memory_type(domain::AbstractDomain) = array_wrapper(domain){eltype(domain)}
+function memory_type(domain::AbstractDomain, ::Physical)
+    array_wrapper(domain){physical_eltype(domain)}
+end
+function memory_type(domain::AbstractDomain, ::Spectral)
+    array_wrapper(domain){spectral_eltype(domain)}
+end
 
 # Overloading
 Base.size(domain::AbstractDomain) = (domain.Ny, domain.Nx)
 Base.length(domain::AbstractDomain) = prod(size(domain))
 Base.ndims(domain::AbstractDomain) = length(size(domain))
+
+# ---------------------------------- Allocation Helpers ------------------------------------
+
+"""
+    allocate(domain::AbstractDomain, ::Physical, dims::Tuple=size(domain))
+    allocate(domain::AbstractDomain, ::Spectral, dims::Tuple=spectral_size(domain))
+
+Allocate an uninitialized array in the given [`Representation`](@ref) ([`Physical`](@ref) \
+or [`Spectral`](@ref)), using `domain`'s memory type and the appropriate eltype for that \
+space ([`physical_eltype`](@ref)/[`spectral_eltype`](@ref) — note the physical case is not \
+always `eltype(domain)`, see [`physical_eltype`](@ref)). `dims` defaults to `domain`'s \
+natural shape in that space, but can be overridden — e.g. to stack several fields along a \
+trailing dimension. [`allocate_physical`](@ref) and [`allocate_spectral`](@ref) are the \
+usual entry points; use `allocate` directly when writing code that's generic over \
+`Representation`.
+"""
+function allocate(domain::AbstractDomain, ::Physical, dims::Tuple=size(domain))
+    memory_type(domain, Physical())(undef, dims)
+end
+function allocate(domain::AbstractDomain, ::Spectral, dims::Tuple=spectral_size(domain))
+    memory_type(domain, Spectral())(undef, dims)
+end
+
+"""
+    allocate_physical(domain::AbstractDomain; dims::Tuple=size(domain))
+    allocate_physical(domain::AbstractDomain, nfields::Integer)
+
+Allocate an uninitialized physical-space array. With no extra argument, shape is \
+`size(domain)`. Pass `dims` for a custom shape, or an `Integer` to stack `nfields` \
+physical-space fields along a trailing dimension.
+"""
+function allocate_physical(domain::AbstractDomain; dims::Tuple=size(domain))
+    allocate(domain, Physical(), dims)
+end
+function allocate_physical(domain::AbstractDomain, nfields::Integer)
+    allocate_physical(domain; dims=(size(domain)..., nfields))
+end
+
+"""
+    allocate_spectral(domain::AbstractDomain; dims::Tuple=spectral_size(domain))
+    allocate_spectral(domain::AbstractDomain, nfields::Integer)
+
+Allocate an uninitialized spectral-space array. With no extra argument, shape is \
+`spectral_size(domain)`. Pass `dims` for a custom shape, or an `Integer` to stack \
+`nfields` spectral-space fields along a trailing dimension.
+"""
+function allocate_spectral(domain::AbstractDomain; dims::Tuple=spectral_size(domain))
+    allocate(domain, Spectral(), dims)
+end
+function allocate_spectral(domain::AbstractDomain, nfields::Integer)
+    allocate_spectral(domain; dims=(spectral_size(domain)..., nfields))
+end
+
+"""
+    evaluate(f, domain::AbstractDomain; kwargs...)
+
+Evaluate `f` over `domain`'s coordinate grid (`f.(domain.x', domain.y; kwargs...)`) and \
+return the result on `domain`'s memory type. 
+"""
+function evaluate(f, domain::AbstractDomain; kwargs...)
+    convert(memory_type(domain, Physical()), f.(domain.x', domain.y; kwargs...))
+end

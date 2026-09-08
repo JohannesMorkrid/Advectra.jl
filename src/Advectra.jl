@@ -8,10 +8,12 @@ export @unpack
 using Plots
 
 include("operators/fftutilities.jl")
-export spectral_transform, spectral_transform!, get_fwd, get_bwd
+export spectral_transform, spectral_transform!, fwd_plan, bwd_plan
 
 include("domains/domain.jl")
-export Domain, wave_vectors, get_points, spectral_size, spectral_length, get_transform_plans
+export Domain, wave_vectors, get_points, spectral_size, spectral_length,
+       get_transform_plans, array_wrapper, memory_type, allocate, allocate_physical,
+       allocate_spectral, area, evaluate, Physical, Spectral
 
 include("operators/spectralOperators.jl")
 export OperatorRecipe, build_operators, build_operator # TODO perhaps remove and swap with @op
@@ -21,8 +23,8 @@ export OperatorRecipe, build_operators, build_operator # TODO perhaps remove and
 using ProgressMeter, Interpolations
 include("diagnostics/diagnostics.jl")
 export radial_density_profile, poloidal_density_profile, radial_vorticity_profile,
-       poloidal_vorticity_profile, poloidal_vorticity_profile, ProgressDiagnostic,
-       plot_frequencies, @diagnostics, DiagnosticRecipe
+       poloidal_vorticity_profile, poloidal_vorticity_profile, @diagnostics,
+       DiagnosticRecipe
 export cfl, radial_COM, plot_density, plot_vorticity, plot_potential,
        potential_energy_integral, kinetic_energy_integral, zonal_kinetic_energy_integral,
        streamer_kinetic_energy_integral, total_energy_integral, enstrophy_energy_integral,

@@ -11,7 +11,7 @@ using Advectra
     dt = 1e-1
 
     ic = initial_condition(isolated_blob, domain)
-    ic_hat = spectral_transform(ic, get_fwd(domain))
+    ic_hat = spectral_transform(ic, fwd_plan(domain))
 
     progress = build_diagnostic(Val(:progress); tspan=tspan, dt=dt)
     for i in 0.0:dt:1.0

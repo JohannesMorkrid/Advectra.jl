@@ -75,7 +75,7 @@ end
 # function probe_field(field::AbstractGPUArray, domain::AbstractDomain,
 #                      indices::AbstractGPUArray{<:Integer},
 #                      interpolation::Nothing=nothing)
-#     data = zeros(size(indices)) |> memory_type(domain)
+#     data = zeros(size(indices)) |> memory_type(domain, Physical())
 #     probe_field!(data, field, indices)
 
 #     # Return either the one point, or the array
@@ -157,7 +157,7 @@ end
 """
 function prepare_indices(positions, domain::Domain)
     Ind = LinearIndices((size(domain)))
-    [Ind[get_index(position, domain)...] for position in positions] |> domain.MemoryType
+    [Ind[get_index(position, domain)...] for position in positions] |> array_wrapper(domain)
 end
 
 """
@@ -283,7 +283,7 @@ function probe_potential(state_hat, prob, time, positions; interpolation=nothing
     slices = eachslice(state_hat; dims=ndims(state_hat))
     n_hat = slices[1]
     Ω_hat = slices[2]
-    ϕ = get_bwd(domain) * solve_phi(n_hat, Ω_hat)
+    ϕ = bwd_plan(domain) * solve_phi(n_hat, Ω_hat)
     probe_field(ϕ, domain, positions, interpolation)
 end
 
@@ -315,7 +315,7 @@ function probe_radial_velocity(state, prob, time, positions; interpolation=nothi
     Ω_hat = slices[2]
     ϕ_hat = solve_phi(n_hat, Ω_hat)
     v_x_hat = -diff_y(ϕ_hat)
-    v_x = get_bwd(domain) * v_x_hat
+    v_x = bwd_plan(domain) * v_x_hat
     probe_field(v_x, domain, positions, interpolation)
 end
 
@@ -354,16 +354,16 @@ function probe_all(state_hat, prob, time, positions; interpolation=nothing)
     v_x_hat = -diff_y(ϕ_hat)
 
     # Cache for transformation
-    cache = zeros(size(domain)) |> memory_type(prob.domain)
+    cache = zeros(size(domain)) |> memory_type(prob.domain, Physical())
 
     # Transform to physical space and probe fields
-    n = mul!(cache, get_bwd(domain), n_hat)
+    n = mul!(cache, bwd_plan(domain), n_hat)
     n_p = probe_field(n, domain, positions, interpolation)
-    Ω = mul!(cache, get_bwd(domain), Ω_hat)
+    Ω = mul!(cache, bwd_plan(domain), Ω_hat)
     Ω_p = probe_field(Ω, domain, positions, interpolation)
-    ϕ = mul!(cache, get_bwd(domain), ϕ_hat)
+    ϕ = mul!(cache, bwd_plan(domain), ϕ_hat)
     ϕ_p = probe_field(ϕ, domain, positions, interpolation)
-    v_x = mul!(cache, get_bwd(domain), v_x_hat)
+    v_x = mul!(cache, bwd_plan(domain), v_x_hat)
     v_x_p = probe_field(v_x, domain, positions, interpolation)
 
     #Combine fields for output (The last field is the flux Γ=nvₓ)

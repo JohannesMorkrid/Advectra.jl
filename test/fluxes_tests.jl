@@ -8,7 +8,7 @@ import Advectra: build_diagnostic, build_operator
 
 # Minimal construction
 domain = Domain(256, 256; MemoryType=CuArray)
-ic = initial_condition(random_crossphased, domain) |> Advectra.memory_type(domain)
+ic = initial_condition(random_crossphased, domain) |> memory_type(domain, Physical())
 dt = 0.0001
 
 # Emulates SpectralODEProblem
@@ -20,7 +20,7 @@ prob = (; domain=domain,
 
 radial_flux = build_diagnostic(Val(:radial_flux))
 
-ic_hat = cat(get_fwd(domain) * ic[:, :, 1], get_fwd(domain) * ic[:, :, 2]; dims=3)
+ic_hat = cat(fwd_plan(domain) * ic[:, :, 1], fwd_plan(domain) * ic[:, :, 2]; dims=3)
 
 radial_flux(ic_hat, prob, 0.0)
 

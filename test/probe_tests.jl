@@ -7,12 +7,12 @@ using CUDA
 import Advectra: build_diagnostic
 
 domain = Domain(256, 256; MemoryType=CuArray)
-ic = initial_condition(isolated_blob, domain) |> Advectra.memory_type(domain)
+ic = initial_condition(isolated_blob, domain) |> memory_type(domain, Physical())
 
 probe = build_diagnostic(Val(:probe_all); domain=domain,
                          positions=[(0, 0), (0.1, 0), (0.4, 0)])
 
-ic_hat = cat(get_fwd(domain) * ic[:, :, 1], get_fwd(domain) * ic[:, :, 2]; dims=3)
+ic_hat = cat(fwd_plan(domain) * ic[:, :, 1], fwd_plan(domain) * ic[:, :, 2]; dims=3)
 
 probe(ic_hat, (; domain=domain, operators=()), 0.0)
 
