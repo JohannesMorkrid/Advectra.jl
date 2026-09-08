@@ -13,7 +13,7 @@ struct PoissonBracket{T<:AbstractArray} <: NonLinearOperator
     qt_right::T
 
     function PoissonBracket(domain::AbstractDomain, diff_x::LinearOperator,
-        diff_y::LinearOperator, quadratic_term::QuadraticTerm)
+                            diff_y::LinearOperator, quadratic_term::QuadraticTerm)
 
         # Allocate
         tmp = fill!(allocate_spectral(domain), zero(spectral_eltype(domain)))
@@ -29,7 +29,7 @@ function operator_dependencies(::Val{:poisson_bracket}, ::Type{_}) where {_}
 end
 
 function build_operator(::Val{:poisson_bracket}, domain::Domain; diff_x, diff_y,
-    quadratic_term, kwargs...)
+                        quadratic_term, kwargs...)
     PoissonBracket(domain, diff_x, diff_y, quadratic_term)
 end
 

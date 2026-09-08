@@ -18,7 +18,7 @@ end
 
 # 2) Non-Boussinesq, no relaxation:
 struct SolvePhiNonBoussinesq{density,T<:AbstractArray,
-    S<:AbstractArray,P<:AbstractArray} <: SolvePhi
+                             S<:AbstractArray,P<:AbstractArray} <: SolvePhi
     laplacian_inv::T
     diff_x::LinearOperator
     diff_y::LinearOperator
@@ -34,7 +34,7 @@ struct SolvePhiNonBoussinesq{density,T<:AbstractArray,
     maxiters::Number
 
     function SolvePhiNonBoussinesq(domain, diff_x, diff_y, quadratic_term;
-        atol, rtol, maxiters, density::Symbol=:log)
+                                   atol, rtol, maxiters, density::Symbol=:log)
         laplacian = get_laplacian(domain)
         laplacian_inv = laplacian .^ -1
         @allowscalar laplacian_inv[1] = 0 # First entry will always be NaN or Inf
@@ -46,15 +46,15 @@ struct SolvePhiNonBoussinesq{density,T<:AbstractArray,
         dηdx = zero(N)
         dηdy = zero(N)
         new{density,typeof(laplacian_inv),typeof(C1),typeof(N)}(laplacian_inv, diff_x,
-            diff_y, quadratic_term, phi,
-            C1, C2, N, dηdx, dηdy, atol,
-            rtol, maxiters)
+                                                                diff_y, quadratic_term, phi,
+                                                                C1, C2, N, dηdx, dηdy, atol,
+                                                                rtol, maxiters)
     end
 end
 
 # 3) Non-Boussinesq, with relaxation:
 struct SolvePhiRelaxation{density,T<:AbstractArray,
-    S<:AbstractArray,P<:AbstractArray} <: SolvePhi
+                          S<:AbstractArray,P<:AbstractArray} <: SolvePhi
     laplacian_inv::T
     diff_x::LinearOperator
     diff_y::LinearOperator
@@ -72,7 +72,7 @@ struct SolvePhiRelaxation{density,T<:AbstractArray,
     w::Number
 
     function SolvePhiRelaxation(domain, diff_x, diff_y, quadratic_term; w,
-        atol, rtol, maxiters, density::Symbol=:log)
+                                atol, rtol, maxiters, density::Symbol=:log)
         laplacian = get_laplacian(domain)
         laplacian_inv = laplacian .^ -1
         @allowscalar laplacian_inv[1] = 0 # First entry will always be NaN or Inf
@@ -85,10 +85,10 @@ struct SolvePhiRelaxation{density,T<:AbstractArray,
         dηdx = zero(N)
         dηdy = zero(N)
         new{density,typeof(laplacian_inv),typeof(C1),typeof(N)}(laplacian_inv, diff_x,
-            diff_y, quadratic_term,
-            initial_phi, previous_phi,
-            C1, C2, N, dηdx, dηdy, atol,
-            rtol, maxiters, w)
+                                                                diff_y, quadratic_term,
+                                                                initial_phi, previous_phi,
+                                                                C1, C2, N, dηdx, dηdy, atol,
+                                                                rtol, maxiters, w)
     end
 end
 
@@ -101,30 +101,30 @@ end
 
 # General user-interface:
 function build_operator(::Val{:solve_phi}, domain::AbstractDomain; boussinesq=true,
-    relaxation=false, kwargs...)
+                        relaxation=false, kwargs...)
     _build_operator(Val(:solve_phi), domain, Val(boussinesq), Val(relaxation); kwargs...)
 end
 
 # Construct simplified case
 function _build_operator(::Val{:solve_phi}, domain::Domain, boussinesq::Val{true},
-    relaxation; kwargs...)
+                         relaxation; kwargs...)
     SolvePhiSimplified(domain)
 end
 
 # Construct non-bousinesq, no-relaxation case:
 function _build_operator(::Val{:solve_phi}, domain::Domain, boussinesq::Val{false},
-    relaxation::Val{false}; diff_x, diff_y, quadratic_term, atol=1e-3,
-    rtol=1e-6, maxiters=100, density=:log, kwargs...)
+                         relaxation::Val{false}; diff_x, diff_y, quadratic_term, atol=1e-3,
+                         rtol=1e-6, maxiters=100, density=:log, kwargs...)
     SolvePhiNonBoussinesq(domain, diff_x, diff_y, quadratic_term;
-        atol, rtol, maxiters, density)
+                          atol, rtol, maxiters, density)
 end
 
 # Construct non-bousinesq, relaxation case:
 function _build_operator(::Val{:solve_phi}, domain::Domain, boussinesq::Val{false},
-    relaxation::Val{true}; diff_x, diff_y, quadratic_term, w=0.9,
-    atol=1e-3, rtol=1e-6, maxiters=100, density=:log, kwargs...)
+                         relaxation::Val{true}; diff_x, diff_y, quadratic_term, w=0.9,
+                         atol=1e-3, rtol=1e-6, maxiters=100, density=:log, kwargs...)
     SolvePhiRelaxation(domain, diff_x, diff_y, quadratic_term;
-        w, atol, rtol, maxiters, density)
+                       w, atol, rtol, maxiters, density)
 end
 
 # ------------------------------------- Main Methods ---------------------------------------
@@ -142,7 +142,7 @@ end
 
 # In-place (non-boussinesq)
 function (op::SolvePhiNonBoussinesq{:linear})(out::AbstractArray, n::AbstractArray,
-    ϖ::AbstractArray)
+                                              ϖ::AbstractArray)
     @unpack laplacian_inv, diff_x, diff_y, quadratic_term, C1, C2, phi, N, dηdx, dηdy = op
     @unpack atol, rtol, maxiters = op
     @unpack U, V, up, vp, padded, transforms, dealiasing_coefficient = quadratic_term
@@ -228,7 +228,7 @@ function (op::SolvePhiNonBoussinesq{:linear})(out::AbstractArray, n::AbstractArr
 end
 
 function (op::SolvePhiNonBoussinesq{:log})(out::AbstractArray, η::AbstractArray,
-    ϖ::AbstractArray)
+                                           ϖ::AbstractArray)
     @unpack laplacian_inv, diff_x, diff_y, quadratic_term, C1, C2, phi, N, dηdx, dηdy = op
     @unpack atol, rtol, maxiters = op
     @unpack U, V, up, vp, padded, transforms, dealiasing_coefficient = quadratic_term
@@ -319,7 +319,7 @@ end
 
 # In-place (non-boussinesq, relaxation)
 function (op::SolvePhiRelaxation{:linear})(out::AbstractArray, n::AbstractArray,
-    ϖ::AbstractArray)
+                                           ϖ::AbstractArray)
     @unpack laplacian_inv, diff_x, diff_y, quadratic_term, C1, C2, N, dηdx, dηdy = op
     @unpack initial_phi, previous_phi, w, atol, rtol, maxiters = op
     @unpack U, V, up, vp, padded, transforms, dealiasing_coefficient = quadratic_term
@@ -410,7 +410,7 @@ function (op::SolvePhiRelaxation{:linear})(out::AbstractArray, n::AbstractArray,
 end
 
 function (op::SolvePhiRelaxation{:log})(out::AbstractArray, η::AbstractArray,
-    ϖ::AbstractArray)
+                                        ϖ::AbstractArray)
     @unpack laplacian_inv, diff_x, diff_y, quadratic_term, C1, C2, N, dηdx, dηdy = op
     @unpack initial_phi, previous_phi, w, atol, rtol, maxiters = op
     @unpack U, V, up, vp, padded, transforms, dealiasing_coefficient = quadratic_term

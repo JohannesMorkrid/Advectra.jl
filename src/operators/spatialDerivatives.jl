@@ -68,7 +68,7 @@ struct GradDotGradOperator{T<:AbstractArray} <: NonLinearOperator
     right::T
     tmp::T
     function GradDotGradOperator(domain::AbstractDomain, diff_x::LinearOperator,
-        diff_y::LinearOperator, quadratic_term::QuadraticTerm)
+                                 diff_y::LinearOperator, quadratic_term::QuadraticTerm)
         tmp = fill!(allocate_spectral(domain), zero(spectral_eltype(domain)))
         left = zero(tmp)
         right = zero(tmp)
@@ -81,7 +81,7 @@ function operator_dependencies(::Val{:grad_dot_grad}, ::Type{_}) where {_}
 end
 
 function build_operator(::Val{:grad_dot_grad}, domain::Domain; diff_x, diff_y,
-    quadratic_term, kwargs...)
+                        quadratic_term, kwargs...)
     GradDotGradOperator(domain, diff_x, diff_y, quadratic_term)
 end
 
