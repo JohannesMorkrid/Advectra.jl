@@ -69,7 +69,7 @@ struct GradDotGradOperator{T<:AbstractArray} <: NonLinearOperator
     tmp::T
     function GradDotGradOperator(domain::AbstractDomain, diff_x::LinearOperator,
                                  diff_y::LinearOperator, quadratic_term::QuadraticTerm)
-        tmp = zeros(spectral_size(domain)) |> domain.MemoryType{complex(domain.precision)}
+        tmp = fill!(allocate_spectral(domain), zero(spectral_eltype(domain)))
         left = zero(tmp)
         right = zero(tmp)
         new{typeof(tmp)}(diff_x, diff_y, quadratic_term, left, right, tmp)

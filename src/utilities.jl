@@ -217,7 +217,7 @@ Generate random noise from randomly phased spectral modes, with zonal and stream
 @nobroadcast function random_phase(domain::AbstractDomain; value=10^-6, ndims=1,
                                    include_zonal=false, include_streamer=false)
     θ = 2π * rand(spectral_size(domain)..., (ndims == 1 ? () : (ndims,))...)
-    u_hat = value .* exp.(im * θ) |> domain.MemoryType
+    u_hat = value .* exp.(im * θ) |> array_wrapper(domain)
     include_zonal || (selectdim(u_hat, 1, 1) .= 0.0)
     include_streamer || (selectdim(u_hat, 2, 1) .= 0.0)
     spectral_transform(u_hat, bwd(domain))
@@ -244,7 +244,7 @@ and the vorticity is derived from the potential via:
 """
 @nobroadcast function random_crossphased(domain::AbstractDomain; include_streamer=false,
                                          include_zonal=false, value=1e-6, cross_phase=π / 2)
-    θ = 2π * rand(spectral_size(domain)...) |> domain.MemoryType
+    θ = 2π * rand(spectral_size(domain)...) |> array_wrapper(domain)
     ϕ_hat = value .* exp.(im * θ)
     n_hat = ϕ_hat .* exp(im * cross_phase)
     laplacian = build_operator(:laplacian, domain)

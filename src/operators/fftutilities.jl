@@ -70,11 +70,11 @@ end
 
 # ---------------------------------------- Helpers -----------------------------------------
 
-get_fwd(transformplans::FourierTransformPlans) = transformplans.FT
-const fwd = get_fwd
+fwd_plan(transformplans::FourierTransformPlans) = transformplans.FT
+const fwd = fwd_plan
 
-get_bwd(transformplans::FourierTransformPlans) = transformplans.iFT
-const bwd = get_bwd
+bwd_plan(transformplans::FourierTransformPlans) = transformplans.iFT
+const bwd = bwd_plan
 
 """
     Base.show(io::IO, transformplans::AbstractTransformPlans)
@@ -84,8 +84,8 @@ const bwd = get_bwd
 function Base.show(io::IO, transformplans::AbstractTransformPlans)
     typename = nameof(typeof(transformplans))
 
-    fwd = get_fwd(transformplans)
-    bwd = get_bwd(transformplans)
+    fwd = fwd_plan(transformplans)
+    bwd = bwd_plan(transformplans)
 
     # TODO perhaps do a better check if the plan is real
     if transformplans isa rFFTPlans
@@ -106,8 +106,8 @@ end
 """
 function Base.show(io::IO, ::MIME"text/plain", transformplans::AbstractTransformPlans)
     typename = nameof(typeof(transformplans))
-    fwd = get_fwd(transformplans)
-    bwd = get_bwd(transformplans)
+    fwd = fwd_plan(transformplans)
+    bwd = bwd_plan(transformplans)
 
     print(io, typename, "(fwd: ", fwd, ", bwd: ", bwd, ")")
 end

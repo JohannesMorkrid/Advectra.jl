@@ -64,8 +64,8 @@ Advectra.spectral_length
 Advectra.lengths
 Advectra.area
 Advectra.get_transform_plans
-Advectra.get_fwd
-Advectra.get_bwd
+Advectra.fwd_plan
+Advectra.bwd_plan
 Advectra.memory_type
 Advectra.get_precision
 Advectra.wave_vectors
