@@ -218,6 +218,11 @@ function Base.show(io::IO, m::MIME"text/plain", domain::AbstractDomain)
     end
 end
 
+function Base.hash(d::Domain, h::UInt)
+    hash((size(d), lengths(d), memory_type(d), domain_kwargs(d), first.(get_points(d)), h))
+end
+Base.:(==)(d1::Domain, d2::Domain) = hash(d1, UInt(0)) == hash(d2, UInt(0))
+
 """
 lengths(domain::Domain)
 
@@ -390,6 +395,9 @@ Base.ndims(domain::AbstractDomain) = length(size(domain))
 
 # ---------------------------------- Allocation Helpers ------------------------------------
 
+rep_size(domain::AbstractDomain, ::Physical) = size(domain)
+rep_size(domain::AbstractDomain, ::Spectral) = spectral_size(domain)
+
 """
     allocate(domain::AbstractDomain, ::Physical, dims::Tuple=size(domain))
     allocate(domain::AbstractDomain, ::Spectral, dims::Tuple=spectral_size(domain))
@@ -408,6 +416,15 @@ function allocate(domain::AbstractDomain, ::Physical, dims::Tuple=size(domain))
 end
 function allocate(domain::AbstractDomain, ::Spectral, dims::Tuple=spectral_size(domain))
     memory_type(domain, Spectral())(undef, dims)
+end
+
+function allocate(domain::AbstractDomain, rep::Representation; # Physical() ?
+                  dims::Tuple=rep_size(domain, rep))
+    allocate(domain, rep, dims)
+end
+
+function allocate(domain::AbstractDomain, nfields::Integer, rep::Representation=Physical())
+    allocate(domain, rep, (rep_size(domain, rep)..., nfields))
 end
 
 """
