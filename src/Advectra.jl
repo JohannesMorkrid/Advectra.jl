@@ -18,6 +18,9 @@ export Domain, wave_vectors, get_points, spectral_size, spectral_length,
 include("field.jl")
 export Field
 
+include("state.jl")
+export State, unpack_state
+
 include("operators/spectralOperators.jl")
 export OperatorRecipe, build_operators, build_operator # TODO perhaps remove and swap with @op
 # reciprocal, spectral_exp, spectral_expm1,
