@@ -946,7 +946,7 @@ end
     assert_no_nan(u::AbstractArray, t)
     assert_no_nan(u::AbstractGPUArray, t)
 
-  Checks if the first entry in `u` is `NaN`, if so a breakdown occured and an error is thrown.
+  Checks if the last entry in `u` is `NaN`, if so a breakdown occured and an error is thrown.
 """
 assert_no_nan(state::AbstractArray, time) =
     if isnan(state[end])
