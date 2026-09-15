@@ -48,8 +48,8 @@
   for a given spectral ODE problem.
 """
 mutable struct Output{DV<:AbstractArray{<:Diagnostic},UB<:AbstractArray,T<:AbstractArray,
-                      S<:Union{HDF5.Group,Nothing},PT<:Function,
-                      K<:NamedTuple}
+    S<:Union{HDF5.Group,Nothing},PT<:Function,
+    K<:NamedTuple}
     diagnostics::DV
     strides::Vector{Int}
     state_buffer::UB
@@ -65,16 +65,16 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},UB<:AbstractArray,T<:Abstr
     resume::Bool
 
     function Output(prob::SOP; filename::FN=basename(tempname()) * ".h5",
-                    physical_transform::PT=identity,
-                    simulation_name::SN=:filename,
-                    store_hdf::Bool=true,
-                    store_locally::Bool=true,
-                    storage_limit::AbstractString="",
-                    flush_interval::Int=10,
-                    resume::Bool=false,
-                    h5_kwargs...) where {SOP<:SpectralODEProblem,
-                                         FN<:AbstractString,PT<:Function,
-                                         SN<:Union{AbstractString,Symbol}}
+        physical_transform::PT=identity,
+        simulation_name::SN=:filename,
+        store_hdf::Bool=true,
+        store_locally::Bool=true,
+        storage_limit::AbstractString="",
+        flush_interval::Int=10,
+        resume::Bool=false,
+        h5_kwargs...) where {SOP<:SpectralODEProblem,
+        FN<:AbstractString,PT<:Function,
+        SN<:Union{AbstractString,Symbol}}
 
         # Prepare initial state
         state, t0 = prepare_initial_state(prob; physical_transform=physical_transform)
@@ -90,14 +90,14 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},UB<:AbstractArray,T<:Abstr
 
         # Setup HDF5 storage if wanted
         simulation = setup_hdf5_storage(prob, t0;
-                                        filename=filename,
-                                        simulation_name=simulation_name,
-                                        diagnostics=diagnostics,
-                                        initial_samples=initial_samples,
-                                        strides=strides,
-                                        store_hdf=store_hdf,
-                                        h5_kwargs=h5_kwargs,
-                                        resume=resume)
+            filename=filename,
+            simulation_name=simulation_name,
+            diagnostics=diagnostics,
+            initial_samples=initial_samples,
+            strides=strides,
+            store_hdf=store_hdf,
+            h5_kwargs=h5_kwargs,
+            resume=resume)
 
         # Setup local (in memory) storage if wanted
         u, t = setup_local_storage(state, t0; store_locally=false) # Currently disabled TODO re-enable
@@ -105,10 +105,10 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},UB<:AbstractArray,T<:Abstr
         # Create output
         new{typeof(diagnostics),typeof(state),typeof(t),typeof(simulation),
             typeof(physical_transform),typeof(h5_kwargs)}(diagnostics, strides, state, t,
-                                                          simulation, physical_transform,
-                                                          store_hdf, store_locally, true,
-                                                          h5_kwargs, flush_interval, now(),
-                                                          resume)
+            simulation, physical_transform,
+            store_hdf, store_locally, true,
+            h5_kwargs, flush_interval, now(),
+            resume)
     end
 end
 
@@ -130,22 +130,22 @@ end
 # -------------------------------------- HDF5 Setup ----------------------------------------
 
 function setup_hdf5_storage(prob, t0;
-                            filename,
-                            simulation_name,
-                            diagnostics,
-                            initial_samples,
-                            strides,
-                            store_hdf=true,
-                            h5_kwargs=(blosc=3,),
-                            resume)
+    filename,
+    simulation_name,
+    diagnostics,
+    initial_samples,
+    strides,
+    store_hdf=true,
+    h5_kwargs=(blosc=3,),
+    resume)
     simulation = setup_simulation_group(filename, simulation_name, prob; resume=resume,
-                                        store_hdf=store_hdf, h5_kwargs=h5_kwargs)
+        store_hdf=store_hdf, h5_kwargs=h5_kwargs)
 
     if !resume
         # if file already exists it will be deleted and must be created again
         rm(simulation.file.filename)
         simulation = setup_simulation_group(filename, simulation_name, prob; resume=false,
-                                            store_hdf=store_hdf, h5_kwargs=h5_kwargs)
+            store_hdf=store_hdf, h5_kwargs=h5_kwargs)
     end
 
     if !isnothing(simulation)
@@ -154,7 +154,7 @@ function setup_hdf5_storage(prob, t0;
             if diagnostic.stores_data
                 N_samples = cld(N_steps, stride) + 1
                 setup_diagnostic_group(simulation, diagnostic, N_samples, sample, t0;
-                                       h5_kwargs)
+                    h5_kwargs)
             end
         end
     end
@@ -172,7 +172,7 @@ end
   are applied to the `"fields"` and `"t"` datasets. The opened `simulation` is returned.
 """
 function setup_simulation_group(filename, simulation_name, prob; store_hdf=true,
-                                h5_kwargs=(blosc=3,), resume=false)
+    h5_kwargs=(blosc=3,), resume=false)
     if store_hdf
         filename = add_h5_if_missing(filename)
         filepath = determine_filepath(filename)
@@ -273,14 +273,14 @@ end
 function write_attributes(simulation, domain::AbstractDomain)
     # Construct list of attributes by removing derived attributes
     attributes = setdiff(fieldnames(typeof(domain)),
-                         (:x, :y, :kx, :ky, :SC, :transforms, :precision, :MemoryType))
+        (:x, :y, :kx, :ky, :SC, :transforms, :precision, :MemoryType))
     for attribute in attributes
         write_attribute(simulation, string(attribute), getproperty(domain, attribute))
     end
 end
 
 function default_chunk(sample; scalar_target_bytes=64 * 1024,
-                       array_target_bytes=1024 * 1024)
+    array_target_bytes=1024 * 1024)
     elsize = sizeof(eltype(sample))
 
     if ndims(sample) == 0
@@ -309,11 +309,11 @@ function setup_diagnostic_group(simulation, diagnostic, N_samples, sample, t0; h
 
         # Create dataset to store samples and associated time
         dset = create_dataset(h5group, "data", datatype(eltype(sample)),
-                              (size(sample)..., typemax(Int64));
-                              chunk=default_chunk(sample), h5_kwargs...)
+            (size(sample)..., typemax(Int64));
+            chunk=default_chunk(sample), h5_kwargs...)
         HDF5.set_extent_dims(dset, (size(sample)..., N_samples))
         dset = create_dataset(h5group, "t", datatype(eltype(t0)), (typemax(Int64),);
-                              chunk=default_chunk(t0), h5_kwargs...)
+            chunk=default_chunk(t0), h5_kwargs...)
         HDF5.set_extent_dims(dset, (N_samples,))
 
         # Add metadata
@@ -423,7 +423,7 @@ end
   - Issues a warning if the last step has a different stride than the rest.
 """
 function determine_sampling_strategy(sample, stride::Int, storage_limit,
-                                     prob::SpectralODEProblem; context="")
+    prob::SpectralODEProblem; context="")
     # Compute total number of simulation steps
     N_steps = compute_number_of_steps(prob)
 
@@ -466,7 +466,7 @@ end
   minimum limit.
 """
 function recommend_stride(storage_limit::Int, N_steps::Int, sample::AbstractArray;
-                          context="")
+    context="")
     field_bytes = length(sample) * sizeof(eltype(sample))
     # Determine how many fields can be fully stored
     max_samples = storage_limit ÷ field_bytes
@@ -498,7 +498,7 @@ recommend_stride(storage_limit, N_steps, sample::Nothing; context="") = 1
    error checks of `recommend_stride` are performed, which may trigger before the storage check.
 """
 function check_storage_size(storage_limit::Int, N_steps::Int, stride::Int, sample;
-                            context="")
+    context="")
     min_stride = recommend_stride(storage_limit, N_steps, sample; context=context)
 
     storage_need = compute_storage_need(N_steps, stride, sample; context=context)
@@ -577,9 +577,9 @@ parse_storage_limit(limit::Integer) = limit
 function parse_storage_limit(limit::AbstractString)
     # Units dictionary
     units = Dict("B" => 1, "KB" => 10^3, "KIB" => 1024, "MB" => 10^6, "MIB" => 1024^2,
-                 "GB" => 10^9, "GIB" => 1024^3, "TB" => 10^12, "TIB" => 1024^4,
-                 "PB" => 10^15,
-                 "PIB" => 1024^5, "EB" => Int128(10^18), "EIB" => Int128(1024^6))
+        "GB" => 10^9, "GIB" => 1024^3, "TB" => 10^12, "TIB" => 1024^4,
+        "PB" => 10^15,
+        "PIB" => 1024^5, "EB" => Int128(10^18), "EIB" => Int128(1024^6))
 
     # Match numeric value and optional unit
     # \s* matches 0 or more white spaces (\s) at the beginning ^ and end $
@@ -698,7 +698,7 @@ function determine_strides(initial_samples, prob::SpectralODEProblem, total_stor
         # Determine the number of samples to be stored and the stride distance
         N_samples,
         stride = determine_sampling_strategy(sample, stride, storage_limit, prob;
-                                             context=context)
+            context=context)
         # Determine the needed storage
         storage_requirement = compute_storage_need(N_samples, stride, sample; context)
         # Accumulate
@@ -712,7 +712,7 @@ function determine_strides(initial_samples, prob::SpectralODEProblem, total_stor
 
     # Compare cumulative storage need to Output storage need
     if !isempty(total_storage_limit) &&
-       parse_storage_limit(total_storage_limit) < total_storage_requirement
+        parse_storage_limit(total_storage_limit) < total_storage_requirement
         # TODO add nice error message showing what each diagnostic requires, so the user can make up their mind
         error("The Output requires $(format_bytes(total_storage_requirement)), which is \
         more than the storage_limit: $total_storage_limit.")
@@ -735,8 +735,8 @@ end
   In addition a check is performed to detect breakdowns, to throw an error. 
 """
 function handle_output!(output::O, step::Integer, state::T, prob::SOP,
-                        time::N) where {O<:Output,T<:AbstractArray,SOP<:
-                                        SpectralODEProblem,N<:Number}
+    time::N) where {O<:Output,T<:AbstractArray,SOP<:
+SpectralODEProblem,N<:Number}
 
     # Keeps track such that state only transformed once
     output.transformed = false
@@ -850,8 +850,8 @@ end
   Creates or opens a `checkpoint` and stores the `cache`at time `t` corresponding to step=`step`.
 """
 function save_checkpoint!(output::O, cache::C, step::Integer,
-                          time::N) where {O<:Output,
-                                          C<:AbstractCache,N<:Number}
+    time::N) where {O<:Output,
+    C<:AbstractCache,N<:Number}
     if output.store_hdf
         # Create or open a h5group for the checkpoint
         checkpoint = create_or_open_group(output.simulation, "checkpoint")
@@ -866,10 +866,10 @@ end
 
   Stores checkpoint by dumping the fields of the `cache` that are not of type 
   `AbstractTableau`. This overwrites the previously stored checkpoint.
-""" # Perhaps one could look into HDF5 compound types in the future
+"""
 function store_checkpoint!(checkpoint::G, cache::C, step::Integer,
-                           time::N) where {G<:HDF5.Group,
-                                           C<:AbstractCache,N<:Number}
+    time::N) where {G<:HDF5.Group,
+    C<:AbstractCache,N<:Number}
 
     # Get all the attributes of cache
     keys = fieldnames(typeof(cache))
@@ -899,8 +899,8 @@ end
   Restores Cache for `scheme` from checkpoint stored in `simulation`.
 """
 function restore_checkpoint(simulation::HDF5.Group, prob::SOP,
-                            scheme::SA) where {SOP<:SpectralODEProblem,
-                                               SA<:AbstractODEAlgorithm}
+    scheme::SA) where {SOP<:SpectralODEProblem,
+    SA<:AbstractODEAlgorithm}
 
     #validate_simulation_group TODO check that dt remains the same, and other parameters
 
@@ -953,7 +953,8 @@ assert_no_nan(state::AbstractArray, time) =
         error("Breakdown occured at t=$time")
     end
 
-function assert_no_nan(state::AbstractGPUArray, time)
+# TODO move to AdvectraGPUArraysExt.jl
+function assert_no_nan(state::Union{GPUField,GPUState,AbstractGPUArray}, time)
     @allowscalar isnan(state[end]) ? error("Breakdown occured at t=$time") : nothing
 end
 
@@ -966,7 +967,7 @@ end
   arguments (`properties...`) are passed onto the group creation or opening functions.
 """
 function create_or_open_group(parent::Union{HDF5.File,HDF5.Group}, path::AbstractString;
-                              properties...)
+    properties...)
     if haskey(parent, path)
         return open_group(parent, path, properties...)
     else
@@ -980,7 +981,7 @@ end
   Deletes the dataset if it allready exists and creates and writes to a new dataset.
 """
 function rewrite_dataset(parent::Union{HDF5.File,HDF5.Group}, name::AbstractString, data;
-                         pv...)
+    pv...)
     if haskey(parent, name)
         delete_object(parent[name])
     end
@@ -991,10 +992,10 @@ end
 
 function Base.show(io::IO, m::MIME"text/plain", output::Output)
     print(io, "Output (store_hdf=", output.store_hdf,
-          ", store_locally=", output.store_locally, ")")
+        ", store_locally=", output.store_locally, ")")
     output.store_hdf ?
     print(io, ", simulation: ", HDF5.name(output.simulation), " (file: ",
-          output.simulation.file.filename, "):") : print(":")
+        output.simulation.file.filename, "):") : print(":")
 
     if output.physical_transform !== identity
         print(io, "\nphysical_transform: ", nameof(output.physical_transform))
@@ -1020,15 +1021,15 @@ for critical parameters: Nx, Ny, dt, and real_transform.
 """
 function validate_resume_attributes(simulation::HDF5.Group, prob::SpectralODEProblem)
     @warn "Advectra only checks a subset of critical numerical parameters (Nx, Ny, dt, real_transform). " *
-          "Advectra does not check if ALL input parameters are identical to the run " *
-          "you are resuming from. It is the responsibility of the user to make sure " *
-          "the simulations are compatible."
+        "Advectra does not check if ALL input parameters are identical to the run " *
+        "you are resuming from. It is the responsibility of the user to make sure " *
+        "the simulations are compatible."
 
     # List of attributes to check and their corresponding values in 'prob' or 'prob.domain'
     expected_values = Dict("dt" => prob.dt,
-                           "Nx" => prob.domain.Nx,
-                           "Ny" => prob.domain.Ny,
-                           "real_transform" => prob.domain.real_transform)
+        "Nx" => prob.domain.Nx,
+        "Ny" => prob.domain.Ny,
+        "real_transform" => prob.domain.real_transform)
 
     for (key, expected) in expected_values
         if !haskey(attributes(simulation), key)
