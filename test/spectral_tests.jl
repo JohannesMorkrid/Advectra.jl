@@ -8,7 +8,7 @@ import Advectra: build_diagnostic, build_operator
 
 # Minimal construction
 domain = Domain(256, 256; MemoryType=CuArray)
-ic = initial_condition(random_crossphased, domain) |> Advectra.memory_type(domain)
+ic = initial_condition(random_crossphased, domain) |> memory_type(domain, Physical())
 dt = 0.0001
 
 # Emulates SpectralODEProblem
@@ -18,7 +18,7 @@ prob = (; domain=domain,
                    solve_phi=build_operator(Val(:solve_phi), domain)),
         dt=dt)
 
-ic_hat = spectral_transform(ic, get_fwd(domain))
+ic_hat = spectral_transform(ic, fwd_plan(domain))
 
 modes = build_diagnostic(Val(:get_modes); axis=:kx)
 modes(ic_hat, prob, 0.0)
@@ -70,8 +70,8 @@ rdomain = Domain(257; L=48, real_transform=true)
 domain = Domain(257; L=48, real_transform=false)
 
 A = randn(257, 257)
-Ar_hat = get_fwd(rdomain)*A
-A_hat = get_fwd(domain)*A
+Ar_hat = fwd_plan(rdomain)*A
+A_hat = fwd_plan(domain)*A
 f = abs2 #identity
 dims = 2
 
@@ -94,8 +94,8 @@ diff_y = build_operator(:diff_y, domain)
 A_zonal = mean(A; dims=1) .+ 0.0*domain.y
 A_streamer = mean(A; dims=2) .+ 0.0*domain.x'
 
-A_zonal_hat = get_fwd(domain)*A_zonal
-A_streamer_hat = get_fwd(domain)*A_streamer
+A_zonal_hat = fwd_plan(domain)*A_zonal
+A_streamer_hat = fwd_plan(domain)*A_streamer
 
 #A_zonal_hat = selectdim(A_hat, 1, 1:1)
 #A_streamer_hat = selectdim(A_hat, 2, 1:1)
@@ -103,13 +103,13 @@ A_streamer_hat = get_fwd(domain)*A_streamer
 vx_hat = -diff_y(A_streamer_hat)
 vy_hat = diff_x(A_zonal_hat)
 
-vx = get_bwd(domain)*vx_hat
-vy = get_bwd(domain)*vy_hat
+vx = bwd_plan(domain)*vx_hat
+vy = bwd_plan(domain)*vy_hat
 
 mean(abs2, vx)
 mean(abs2, vy)
 
-A_hat = get_fwd(domain)*A
+A_hat = fwd_plan(domain)*A
 A_zonal_hat = selectdim(A_hat, 1, 1:1)
 A_streamer_hat = selectdim(A_hat, 2, 1:1)
 
@@ -127,10 +127,10 @@ rdiff_y = build_operator(:diff_y, rdomain)
 #Ar_zonal = mean(A; dims=1) .+ 0.0*rdomain.y
 #Ar_streamer = mean(A; dims=2) .+ 0.0*rdomain.x'
 
-#Ar_zonal_hat = get_fwd(rdomain)*Ar_zonal
-#Ar_streamer_hat = get_fwd(rdomain)*Ar_streamer
+#Ar_zonal_hat = fwd_plan(rdomain)*Ar_zonal
+#Ar_streamer_hat = fwd_plan(rdomain)*Ar_streamer
 
-Ar_hat = get_fwd(rdomain)*A
+Ar_hat = fwd_plan(rdomain)*A
 Ar_zonal_hat = selectdim(Ar_hat, 1, 1:1)
 Ar_streamer_hat = selectdim(Ar_hat, 2, 1:1)
 

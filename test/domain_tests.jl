@@ -1,8 +1,8 @@
 using Test
 using Advectra
 import Advectra: Domain, lengths, wave_vectors, differential_elements,
-                 domain_kwargs, spectral_size, spectral_length, area, differential_area,
-                 get_points
+    domain_kwargs, spectral_size, spectral_length, area, differential_area,
+    get_points
 
 d1 = Domain(256, 256; Lx=1, Ly=1)
 d2 = Domain(256; L=1)
@@ -39,7 +39,7 @@ end
 
 @testset "Wave vectors" for a_domain in Domain_set
     # indices from -Nx/2 .. Nx/2-1 as integers
-    i = vcat(collect(0:(a_domain.Nx÷2-1)), collect(-a_domain.Nx÷2:-1))
+    i = vcat(collect(0:(a_domain.Nx÷2-1)), collect((-a_domain.Nx÷2):-1))
     kx = (2 * π / a_domain.Lx) .* i
     @test wave_vectors(a_domain)[2] ≈ kx
 
@@ -47,7 +47,7 @@ end
         ky_real = (2 * π / a_domain.Ly) .* collect(0:(a_domain.Ny÷2))
         @test wave_vectors(a_domain)[1] ≈ ky_real
     else
-        j = vcat(collect(0:(a_domain.Ny÷2-1)), collect(-a_domain.Ny÷2:-1))
+        j = vcat(collect(0:(a_domain.Ny÷2-1)), collect((-a_domain.Ny÷2):-1))
         ky = (2 * π / a_domain.Ly) .* j
         # to specify tolerances for floating point comparisons
         @test isapprox(wave_vectors(a_domain)[1], ky; rtol=1e-12, atol=1e-12)
@@ -96,25 +96,25 @@ end
 @testset "FFT Round Trip" for a_domain in Domain_set
     # Create a random physical field on the correct memory type
     T = Advectra.get_precision(a_domain)
-    phys_in = rand(T, size(a_domain)...) |> a_domain.MemoryType
-    
-    fwd = Advectra.get_fwd(a_domain)
-    bwd = Advectra.get_bwd(a_domain)
-    
+    phys_in = rand(T, size(a_domain)...) |> array_wrapper(a_domain)
+
+    fwd = Advectra.fwd_plan(a_domain)
+    bwd = Advectra.bwd_plan(a_domain)
+
     # Physical -> Spectral -> Physical
     spec = fwd * phys_in
     phys_out = bwd * spec
-    
+
     @test Array(phys_in) ≈ Array(phys_out)
 end
 
 @testset "Constructor Failures" begin
     # Test incorrect MemoryType (passing a parameterized type)
     @test_throws ArgumentError Domain(64; MemoryType=Array{Float64})
-    
+
     # Test incorrect precision
     @test_throws ArgumentError Domain(64; precision=String)
-    
+
     # Test non-positive dimensions
     @test_throws ArgumentError Domain(-64; L=1.0)
 end
@@ -123,21 +123,21 @@ end
     for T in [Float32, Float64]
         for real_tr in [true, false]
             d = Domain(32; precision=T, real_transform=real_tr)
-            
+
             @test eltype(d.x) === T
             @test eltype(d.kx) === T
-            
-            fwd = Advectra.get_fwd(d)
-            
+
+            fwd = Advectra.fwd_plan(d)
+
             # If it's a real transform, plan expects T (Float)
             # If it's a complex transform, plan expects Complex{T}
             expected_plan_eltype = real_tr ? T : Complex{T}
             @test eltype(fwd) === expected_plan_eltype
-            
+
             # The result of a forward transform is ALWAYS complex
             # Note: for complex transforms, the input must be complex
             input_type = real_tr ? T : Complex{T}
-            phys_tmp = zeros(input_type, size(d)...) |> d.MemoryType
+            phys_tmp = zeros(input_type, size(d)...) |> array_wrapper(d)
             spec_tmp = fwd * phys_tmp
             @test eltype(spec_tmp) === Complex{T}
         end
@@ -149,7 +149,7 @@ end
     Lx, Ly = 2.0, 2.0
     Nx, Ny = 10, 10
     d = Domain(Nx, Ny; Lx=Lx, Ly=Ly, x0=x0, y0=y0)
-    
+
     @test first(d.x) ≈ x0
     @test first(d.y) ≈ y0
     @test last(d.x) ≈ (x0 + Lx - d.dx)
@@ -158,7 +158,7 @@ end
 @testset "IO and Show" begin
     d = Domain(32)
     @test_nowarn show(devnull, MIME"text/plain"(), d)
-    
+
     # Test compact mode used in arrays
     @test_nowarn show(IOContext(devnull, :compact => true), d)
 end

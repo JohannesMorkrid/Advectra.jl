@@ -39,7 +39,7 @@ struct SolvePhiNonBoussinesq{density,T<:AbstractArray,
         laplacian_inv = laplacian .^ -1
         @allowscalar laplacian_inv[1] = 0 # First entry will always be NaN or Inf
 
-        C1 = zeros(spectral_size(domain)) |> domain.MemoryType{complex(domain.precision)}
+        C1 = fill!(allocate_spectral(domain), zero(spectral_eltype(domain)))
         C2 = zero(C1)
         phi = zero(C1)
         N = zero(quadratic_term.U)
@@ -77,7 +77,7 @@ struct SolvePhiRelaxation{density,T<:AbstractArray,
         laplacian_inv = laplacian .^ -1
         @allowscalar laplacian_inv[1] = 0 # First entry will always be NaN or Inf
 
-        C1 = zeros(spectral_size(domain)) |> domain.MemoryType{complex(domain.precision)}
+        C1 = fill!(allocate_spectral(domain), zero(spectral_eltype(domain)))
         C2 = zero(C1)
         initial_phi = zero(C1)
         previous_phi = zero(C1)

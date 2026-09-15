@@ -19,8 +19,8 @@ parameters = (ν=0.0,)
 
 # Break down time 
 diff_y = Advectra.build_operator(Val(:diff_y), domain)
-dudy = diff_y(get_fwd(domain) * u0)
-t_b = -1 / (minimum(real(get_bwd(domain) * dudy)))
+dudy = diff_y(fwd_plan(domain) * u0)
+t_b = -1 / (minimum(real(bwd_plan(domain) * dudy)))
 
 # Time span
 tspan = [0, 0.8 * t_b]

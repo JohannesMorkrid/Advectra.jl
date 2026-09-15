@@ -19,7 +19,8 @@ struct QuadraticTerm{TP<:AbstractTransformPlans,P<:AbstractArray,SP<:AbstractArr
         Ns = size(domain)
 
         # Allocate the physical array, using zero-padding if dealiasing is enabled
-        utmp = zeros(precision, domain.dealiased ? pad_size(Ns) : Ns) |> memory_type(domain)
+        utmp = zeros(precision, domain.dealiased ? pad_size(Ns) : Ns) |>
+               memory_type(domain, Physical())
 
         transforms = construct_transform_plans(utmp, Domain, Val(domain.real_transform))
 
@@ -53,8 +54,9 @@ build_operator(::Val{:quadratic_term}, domain::Domain; kwargs...) = QuadraticTer
 #------------------------------ Quadratic terms interface ----------------------------------
 
 # In-place operator
-@inline function (quadratic_term::QuadraticTerm)(out::T, u::T,
-                                                 v::T) where {T<:AbstractGPUArray}
+@inline function (quadratic_term::QuadraticTerm)(out::Union{AbstractGPUArray,GPUState,
+                                                            GPUField}, u::AbstractArray,
+                                                 v::AbstractArray)
     @assert size(u)==size(v) "u and v must have the same size"
     @unpack transforms, U, V, up, vp, padded, dealiasing_coefficient = quadratic_term
 
@@ -106,8 +108,8 @@ end
     @views @inbounds up[1:Nyl, 1:Nxl] .= u[1:Nyl, 1:Nxl] # Lower left
     @views @inbounds up[1:Nyl, (end-Nxu+1):end] .= u[1:Nyl, (end-Nxu+1):end] # Lower right
     @views @inbounds up[(end-Nyu+1):end, 1:Nxl] .= u[(end-Nyu+1):end, 1:Nxl] # Upper left
-    @views @inbounds up[(end-Nyu+1):end, (end-Nxu+1):end] .= u[(end-Nyu+1):end,
-                                                               (end-Nxu+1):end] # Upper right
+    @views @inbounds up[(end-Nyu+1):end,
+                        (end-Nxu+1):end] .= u[(end-Nyu+1):end, (end-Nxu+1):end] # Upper right
     return up
 end
 
@@ -138,8 +140,8 @@ end
     @views @inbounds u[1:Nyl, 1:Nxl] .= up[1:Nyl, 1:Nxl] # Lower left
     @views @inbounds u[1:Nyl, (end-Nxu+1):end] .= up[1:Nyl, (end-Nxu+1):end] # Lower right
     @views @inbounds u[(end-Nyu+1):end, 1:Nxl] .= up[(end-Nyu+1):end, 1:Nxl] # Upper left
-    @views @inbounds u[(end-Nyu+1):end, (end-Nxu+1):end] .= up[(end-Nyu+1):end,
-                                                               (end-Nxu+1):end] # Upper right
+    @views @inbounds u[(end-Nyu+1):end,
+                       (end-Nxu+1):end] .= up[(end-Nyu+1):end, (end-Nxu+1):end] # Upper right
     return u
 end
 
