@@ -111,7 +111,7 @@ end
 
 """
 """
-prepare_initial_condition(u0, domain::Domain) = u0 |> memory_type(domain, Physical())
+prepare_initial_condition(u0, domain::Domain) = adapt(memory_type(domain, Physical()), u0)
 
 # -------------------------- Spectral Coefficient Initialization ---------------------------
 
@@ -135,7 +135,6 @@ end
 """
 allocate_coefficients(u0, domain::Domain) = _allocate_coefficients(u0, domain)
 
-# TODO perhaps clean up this logic
 function _allocate_coefficients(u0::AbstractArray{<:Number}, domain::Domain)
     # Allocate array for spectral modes 
     sz = size(bwd_plan(domain))
@@ -146,6 +145,16 @@ end
 
 function _allocate_coefficients(u0::AbstractArray{<:AbstractArray}, domain::Domain)
     [_allocate_coefficients(u, domain) for u in u0]
+end
+
+function _allocate_coefficients(u0::State, domain::Domain)
+    data = _allocate_coefficients(get_data(u0), domain)
+    State(_names(u0), data, domain)
+end
+
+function _allocate_coefficients(u0::Field, domain::Domain)
+    data = _allocate_coefficients(get_data(u0), domain)
+    Field(data, domain)
 end
 
 # --------------------------------- Converting Parameters ----------------------------------
