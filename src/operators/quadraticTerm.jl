@@ -54,8 +54,9 @@ build_operator(::Val{:quadratic_term}, domain::Domain; kwargs...) = QuadraticTer
 #------------------------------ Quadratic terms interface ----------------------------------
 
 # In-place operator
-@inline function (quadratic_term::QuadraticTerm)(out::T, u::T,
-                                                 v::T) where {T<:AbstractGPUArray}
+@inline function (quadratic_term::QuadraticTerm)(out::Union{AbstractGPUArray,GPUState,
+                                                            GPUField}, u::AbstractArray,
+                                                 v::AbstractArray)
     @assert size(u)==size(v) "u and v must have the same size"
     @unpack transforms, U, V, up, vp, padded, dealiasing_coefficient = quadratic_term
 
