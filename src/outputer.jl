@@ -893,6 +893,24 @@ function store_checkpoint!(checkpoint::G, cache::C, step::Integer,
 end
 
 """
+    restore_like(template, raw)
+
+  Adapts `raw` (a plain array read back from HDF5) to the storage backend of `template`,
+  and, if `template` is a `Field` or `State`, rewraps it with `template`'s domain (and
+  names, for `State`). `adapt(typeof(template), raw)` alone is not enough here: the
+  `Field`/`State` `Adapt.adapt_storage` overloads only move the underlying storage
+  (e.g. to the GPU) and return a bare array, dropping the wrapper.
+"""
+restore_like(template, raw) = adapt(typeof(template), raw)
+function restore_like(template::Field, raw)
+    Field(adapt(Adapt.parent_type(typeof(template)), raw), get_domain(template))
+end
+function restore_like(template::State, raw)
+    data = adapt(Adapt.parent_type(typeof(template)), raw)
+    State(_names(template), data, get_domain(template))
+end
+
+"""
     restore_checkpoint(simulation::HDF5.Group, prob::SOP, scheme::SA) where {
     SOP<:SpectralODEProblem,SA<:AbstractODEAlgorithm}
 
@@ -914,8 +932,8 @@ function restore_checkpoint(simulation::HDF5.Group, prob::SOP,
         # Skip restoring Tableau
         isa(field, AbstractTableau) ? continue : nothing
 
-        # Adapt the data to the same type as the field
-        data = adapt(typeof(field), read(simulation["checkpoint"], string(key)))
+        # Adapt (and, for Field/State, rewrap) the data to match the field's type
+        data = restore_like(field, read(simulation["checkpoint"], string(key)))
         setproperty!(cache, key, data)
     end
 
