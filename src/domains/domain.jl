@@ -5,7 +5,8 @@ abstract type AbstractDomain{T<:Number} end
 """
     eltype(::Type{<:AbstractDomain{T}}) where {T}
 
-Return the physical-space element type `T`
+Return the element type `T` (or `precision`) of the Domain, this is not necessarily the same as the \
+[`physical_eltype`](@ref) or the [`spectral_eltype`](@ref).
 """
 Base.eltype(::Type{<:AbstractDomain{T}}) where {T} = T
 
