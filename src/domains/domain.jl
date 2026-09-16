@@ -343,16 +343,6 @@ Return the backward transform plan (FFTW's own terminology for the inverse trans
 """
 bwd_plan(domain::AbstractDomain) = bwd_plan(get_transform_plans(domain))
 
-"""
-    get_fwd(x)
-    get_bwd(x)
-
-Aliases for [`fwd_plan`](@ref)/[`bwd_plan`](@ref), kept for existing call sites. Prefer \
-`fwd_plan`/`bwd_plan` in new code.
-"""
-const get_fwd = fwd_plan
-const get_bwd = bwd_plan
-
 get_transform_plans(domain::AbstractDomain) = domain.transforms
 get_precision(domain::AbstractDomain) = eltype(domain)
 
