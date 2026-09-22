@@ -217,11 +217,11 @@ end
 function kinetic_energy_spectrum(state_hat::AbstractArray, prob, time,
                                  spectrum=Val{:radial})
     @unpack domain, operators = prob
-    @unpack solve_phi, diff_x, diff_y = operators
+    @unpack diff_x, diff_y = operators
     slices = eachslice(state_hat; dims=ndims(state_hat))
     n_hat = slices[1]
     Ω_hat = slices[2]
-    ϕ_hat = solve_phi(n_hat, Ω_hat)
+    ϕ_hat = get_phi!(prob, n_hat, Ω_hat)
 
     energy_spectrum(abs2.(diff_x(ϕ_hat)) + abs2.(diff_y(ϕ_hat)), prob, time, spectrum) / 2
 end
@@ -256,11 +256,11 @@ end
 """
 function flux_spectrum(state_hat::AbstractArray, prob, time, spectrum=Val{:poloidal})
     @unpack domain, operators = prob
-    @unpack solve_phi, diff_y = operators
+    @unpack diff_y = operators
     slices = eachslice(state_hat; dims=ndims(state_hat))
     n_hat = slices[1]
     Ω_hat = slices[2]
-    ϕ_hat = solve_phi(n_hat, Ω_hat)
+    ϕ_hat = get_phi!(prob, n_hat, Ω_hat)
     vx_hat = -diff_y(ϕ_hat)
     energy_spectrum(real(n_hat .* conj.(vx_hat)), prob, time, spectrum)
 end
@@ -325,13 +325,10 @@ end
 """
 function electrostatic_potential_spectrum(state_hat::AbstractArray, prob, time,
                                           spectrum=Val{:radial})
-    @unpack domain, operators = prob
-    @unpack solve_phi = operators
-
     slices = eachslice(state_hat; dims=ndims(state_hat))
     n_hat = slices[1]
     Ω_hat = slices[2]
-    ϕ_hat = solve_phi(n_hat, Ω_hat)
+    ϕ_hat = get_phi!(prob, n_hat, Ω_hat)
     energy_spectrum(abs2.(ϕ_hat), prob, time, spectrum) / 2
 end
 

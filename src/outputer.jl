@@ -741,6 +741,9 @@ function handle_output!(output::O, step::Integer, state::T, prob::SOP,
     # Keeps track such that state only transformed once
     output.transformed = false
 
+    # Keeps track such that solve_phi is only computed once per step, across diagnostics
+    prob.phi_cache.valid = false
+
     # Remove modes after each step using user defined function
     prob.remove_modes(state, prob.domain)
 

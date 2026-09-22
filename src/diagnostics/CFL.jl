@@ -23,11 +23,11 @@ end
 # Calculate velocity U_ExB = ̂z×∇Φ   
 function _compute_velocity(state_hat, prob, time, velocity::Val{:ExB})
     @unpack domain, operators = prob
-    @unpack solve_phi, diff_x, diff_y = operators
+    @unpack diff_x, diff_y = operators
     slices = eachslice(state_hat; dims=ndims(state_hat))
     n_hat = slices[1]
     Ω_hat = slices[2]
-    ϕ_hat = solve_phi(n_hat, Ω_hat)
+    ϕ_hat = get_phi!(prob, n_hat, Ω_hat)
     return (bwd_plan(domain) * -diff_y(ϕ_hat), bwd_plan(domain) * diff_x(ϕ_hat))
 end
 

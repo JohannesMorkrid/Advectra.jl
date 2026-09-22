@@ -27,7 +27,8 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,
                                   D<:AbstractDomain,tType,pType,
                                   operatorsType<:NamedTuple,
                                   diagnosticRecipesType<:Vector,N<:Number,
-                                  RMType<:Function,K,iip} <: AbstractODEProblem{iip}
+                                  RMType<:Function,K,iip,
+                                  PhiCacheType<:PhiCache} <: AbstractODEProblem{iip}
     L::LType
     N::NType
     u0::u0Type
@@ -41,6 +42,7 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,
     dt::N
     remove_modes::RMType
     kwargs::K
+    phi_cache::PhiCacheType
 
     function SpectralODEProblem(NonLinear::Function, u0, domain::AbstractDomain, tspan;
                                 p=NullParameters(), dt=0.01,
@@ -86,11 +88,14 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,
         # Makes the rhs follow the signature used by SciML
         L, N = prepare_functions(Linear, NonLinear, ops)
 
+        # Buffer for caching solve_phi across diagnostics within a single output step
+        phi_cache = PhiCache(similar(u0_hat, size(u0_hat)[1:(end - 1)]), false)
+
         new{typeof(L),typeof(N),typeof(u0),typeof(u0_hat),typeof(domain),typeof(tspan),
             typeof(p),typeof(ops),typeof(diagnostics),typeof(dt),typeof(remove_modes),
-            typeof(kwargs),isinplace(Linear, NonLinear)}(L, N, u0, u0_hat, domain, tspan, p,
-                                                         ops, diagnostics, dt, remove_modes,
-                                                         kwargs)
+            typeof(kwargs),isinplace(Linear, NonLinear),
+            typeof(phi_cache)}(L, N, u0, u0_hat, domain, tspan, p, ops, diagnostics, dt,
+                               remove_modes, kwargs, phi_cache)
     end
 end
 
