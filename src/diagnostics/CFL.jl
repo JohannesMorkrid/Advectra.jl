@@ -28,7 +28,7 @@ function _compute_velocity(state_hat, prob, time, velocity::Val{:ExB})
     n_hat = slices[1]
     Ω_hat = slices[2]
     ϕ_hat = solve_phi(n_hat, Ω_hat)
-    return (get_bwd(domain) * -diff_y(ϕ_hat), get_bwd(domain) * diff_x(ϕ_hat))
+    return (bwd_plan(domain) * -diff_y(ϕ_hat), bwd_plan(domain) * diff_x(ϕ_hat))
 end
 
 function _compute_velocity(state, prob, time, velocity::Val{:burger})
@@ -155,7 +155,7 @@ assumes_spectral(::Val{T}) where {T} = true
 function requires_operator(::Val{cfl}; velocity_method, kwargs...)
     if velocity_method == :ExB
         return [OperatorRecipe(:diff_x), OperatorRecipe(:diff_y),
-                OperatorRecipe(:solve_phi)]
+            OperatorRecipe(:solve_phi)]
     else
         return []
     end

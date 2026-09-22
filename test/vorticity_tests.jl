@@ -7,11 +7,11 @@ domain = Domain(1024, 1024; Lx=50, Ly=50, MemoryType=CuArray, precision=Float64)
 
 # Density
 N = 10 * CUDA.ones(size(domain))
-N_hat = spectral_transform(N, get_fwd(domain))
+N_hat = spectral_transform(N, fwd_plan(domain))
 
 # Construct dipole vorticity
 Ω = initial_condition(gaussian, domain) |> CuArray
-Ω_hat = spectral_transform(Ω, get_fwd(domain))
+Ω_hat = spectral_transform(Ω, fwd_plan(domain))
 diff_y = build_operator(:diff_y, domain)
 ϖ_hat = diff_y(Ω_hat)
 
@@ -33,12 +33,12 @@ laplacian = build_operator(:laplacian, domain)
 
 # Compute ∇²ϕ
 ϖ1_hat = laplacian(ϕ1_hat)
-ϖ1 = spectral_transform(ϖ1_hat, get_bwd(domain))
+ϖ1 = spectral_transform(ϖ1_hat, bwd_plan(domain))
 ϖ2_hat = laplacian(ϕ2_hat)
-ϖ2 = spectral_transform(ϖ2_hat, get_bwd(domain))
+ϖ2 = spectral_transform(ϖ2_hat, bwd_plan(domain))
 
 # To be compared against
-ddϖ = spectral_transform(ϖ_hat, get_bwd(domain))
+ddϖ = spectral_transform(ϖ_hat, bwd_plan(domain))
 
 using Plots
 heatmap(domain, Array(ϖ1); aspect_ratio=:equal, title="Boussinesq ∇²ϕ")
@@ -53,18 +53,18 @@ function vorticity(N, ϕ; diff_x, diff_y, quadratic_term)
 end
 
 N = initial_condition(gaussian, domain; A=10, B=1) |> CuArray
-spectral_transform!(N_hat, get_fwd(domain), N)
+spectral_transform!(N_hat, fwd_plan(domain), N)
 ϕ = CUDA.@allowscalar sin.(domain.ky[2] * domain.y) .+ 0 * domain.x' |> CuArray
-ϕ_hat = spectral_transform(ϕ, get_fwd(domain))
+ϕ_hat = spectral_transform(ϕ, fwd_plan(domain))
 ϖ_hat = vorticity(N_hat, ϕ_hat; diff_x=diff_x, diff_y, quadratic_term)
 
-ϖ = spectral_transform(ϖ_hat, get_bwd(domain))
+ϖ = spectral_transform(ϖ_hat, bwd_plan(domain))
 heatmap(Array(ϖ))
 
 ϕ1_hat = solve_phi_b(ϖ_hat)
 ϕ2_hat = solve_phi_nb(N_hat, ϖ_hat)
-ϕ1 = spectral_transform(ϕ1_hat, get_bwd(domain))
-ϕ2 = spectral_transform(ϕ2_hat, get_bwd(domain))
+ϕ1 = spectral_transform(ϕ1_hat, bwd_plan(domain))
+ϕ2 = spectral_transform(ϕ2_hat, bwd_plan(domain))
 heatmap(Array(ϕ1))
 heatmap(Array(ϕ2))
 using LinearAlgebra

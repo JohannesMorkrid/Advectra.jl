@@ -16,7 +16,7 @@ struct PoissonBracket{T<:AbstractArray} <: NonLinearOperator
                             diff_y::LinearOperator, quadratic_term::QuadraticTerm)
 
         # Allocate
-        tmp = zeros(spectral_size(domain)) |> domain.MemoryType{complex(domain.precision)}
+        tmp = fill!(allocate_spectral(domain), zero(spectral_eltype(domain)))
         qt_left = zero(tmp)
         qt_right = zero(qt_left)
 

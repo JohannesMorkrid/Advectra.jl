@@ -8,7 +8,7 @@ import Advectra: build_diagnostic, build_operator
 
 # Minimal construction
 domain = Domain(256, 256; MemoryType=CuArray)
-ic = initial_condition(random_crossphased, domain) |> Advectra.memory_type(domain)
+ic = initial_condition(random_crossphased, domain) |> memory_type(domain, Physical())
 dt = 0.0001
 
 # Emulates SpectralODEProblem
@@ -22,7 +22,7 @@ prob = (; domain=domain,
         p=(c=0.01,),
         dt=dt)
 
-ic_hat = spectral_transform(ic, get_fwd(domain))
+ic_hat = spectral_transform(ic, fwd_plan(domain))
 
 # Parseval energy integrals:
 
@@ -78,8 +78,8 @@ prob = (; domain=domain,
                    quadratic_term=build_operator(Val(:quadratic_term), domain)),
         p=(c=0.01,),
         dt=dt)
-A = ones(4, 8) |> Advectra.memory_type(domain)
-A_hat = get_fwd(domain) * A
+A = ones(4, 8) |> memory_type(domain, Physical())
+A_hat = fwd_plan(domain) * A
 integral_of_quadratic_term(A_hat, A_hat, domain, prob.operators.quadratic_term)
 prob.operators.quadratic_term.dealiasing_coefficient
 #2.25

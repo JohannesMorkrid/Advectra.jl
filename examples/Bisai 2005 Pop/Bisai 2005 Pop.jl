@@ -21,9 +21,9 @@ end
 # Current implementation of source
 source(x, y, S_0, λ_s) = @. S_0 * exp(-((x + 80 - λ_s) / λ_s)^2) + 0 * y
 
-S = get_fwd(domain) * CuArray(source(domain.x', domain.y, 5e-4, 5))
+S = fwd_plan(domain) * CuArray(source(domain.x', domain.y, 5e-4, 5))
 using Plots
-heatmap(Array(get_bwd(domain) * S); aspect_ratio=:equal)
+heatmap(Array(bwd_plan(domain) * S); aspect_ratio=:equal)
 
 # Non-linear operator, fully non-linear
 function NonLinear!(du, u, operators, p, t)
@@ -62,12 +62,12 @@ diagnostics = @diagnostics [
 ]
 
 prob = SpectralODEProblem(Linear!, NonLinear!, ic, domain, tspan; p=parameters, dt=1,
-                          operators=:all, diagnostics=diagnostics)
+    operators=:all, diagnostics=diagnostics)
 
 # Output
 output_file_name = joinpath(@__DIR__, "output", "Bisai.h5")
 output = Output(prob; filename=output_file_name, simulation_name=:parameters,
-                store_locally=false, resume=true)
+    store_locally=false, resume=true)
 
 # Solve and plot
 sol = spectral_solve(prob, MSS3(), output;)
