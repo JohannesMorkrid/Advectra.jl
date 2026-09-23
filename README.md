@@ -144,7 +144,7 @@ repository using the following:
   title        = {Advectra},
   year         = {2026},
   url          = {https://github.com/JohannesMorkrid/Advectra.jl},
-  version      = {0.1.0},
+  version      = {0.5.0},
   license      = {MIT},
   note         = {GitHub repository},
 }
