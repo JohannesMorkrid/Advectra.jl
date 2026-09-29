@@ -5,6 +5,8 @@ using Test
 
 const TEST_FILES = ["domain_tests.jl",
                     "operator_tests.jl",
+                    "problem_tests.jl",
+                    "schemes_tests.jl",
                     "spectrum_tests.jl",
                     "profile_tests.jl",
                     "diagnostics_tests.jl",

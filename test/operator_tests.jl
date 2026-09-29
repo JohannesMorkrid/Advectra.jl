@@ -1,6 +1,7 @@
 using Test
 using Advectra
 using LinearAlgebra
+import Advectra: SpectralConstant
 
 # ------------------------------------------------------------------------------
 # 1. Setup Self-Contained Domain Set
@@ -86,3 +87,73 @@ Domain_set = [d1, d2, d3]
     end
 end
 
+
+# ------------------------------------------------------------------------------
+# 3. Non-linear Operators and Operator Algebra
+# ------------------------------------------------------------------------------
+
+@testset "Non-linear operators - dealiased=$dealiased" for dealiased in (true, false)
+    d = Domain(16, 12; Lx=2π, Ly=4π, dealiased)
+    x, y = d.x', d.y
+    F(u) = fwd_plan(d) * u
+    B(u_hat) = bwd_plan(d) * u_hat
+    q = build_operator(Val(:quadratic_term), d)
+
+    @testset "Quadratic term" begin
+        u = @. sin(x) + cos(y / 2)
+        v = @. cos(x) + 0 * y
+        @test B(q(F(u), F(v))) ≈ u .* v
+    end
+
+    @testset "Poisson bracket" begin
+        pb = build_operator(Val(:poisson_bracket), d; diff_x=build_operator(Val(:diff_x), d),
+                            diff_y=build_operator(Val(:diff_y), d), quadratic_term=q)
+        # {ϕ, n} = ∂ϕ/∂x ∂n/∂y - ∂ϕ/∂y ∂n/∂x
+        ϕ = @. sin(x) + 0 * y
+        n = @. sin(y / 2) + 0 * x
+        @test B(pb(F(ϕ), F(n))) ≈ @. cos(x) * cos(y / 2) / 2
+        @test B(pb(F(n), F(ϕ))) ≈ @. -cos(x) * cos(y / 2) / 2
+    end
+
+    @testset "Spectral functions" begin
+        # Smooth and positive, so the pseudo-spectral evaluation is accurate
+        u = @. 1.5 + 0.3 * sin(x) * cos(y / 2)
+        for (name, f) in [(:spectral_exp, exp), (:spectral_expm1, expm1),
+                          (:spectral_log, log), (:reciprocal, inv)]
+            op = build_operator(Val(name), d; quadratic_term=q)
+            @test B(op(F(u))) ≈ f.(u) atol = 1e-5
+        end
+    end
+end
+
+@testset "Linear operator algebra" begin
+    d = Domain(16; L=2π)
+    diff_x = build_operator(Val(:diff_x), d)
+    diff_y = build_operator(Val(:diff_y), d)
+    @test (2 * diff_x).coeffs ≈ 2 .* diff_x.coeffs
+    @test (diff_x + diff_y).coeffs ≈ diff_x.coeffs .+ diff_y.coeffs
+    @test (diff_x - diff_y).coeffs ≈ diff_x.coeffs .- diff_y.coeffs
+    @test (diff_x^2).coeffs ≈ build_operator(Val(:diff_xx), d).coeffs
+    @test (diff_x^2 + diff_y^2).coeffs ≈ build_operator(Val(:laplacian), d).coeffs
+end
+
+@testset "Spectral constant" begin
+    a, b = SpectralConstant(; val=6.0), SpectralConstant(; val=2.0)
+    @test (a + b).value == 8
+    @test (a - b).value == 4
+    @test (a * b).value == 12
+    @test (a / b).value == 3
+    @test (a * 2).value == (2 * a).value == 12
+    @test (a / 2).value == 3
+    @test (12 / a).value == 2
+    @test (-a).value == -6
+
+    # Only the zeroth mode (first entry) is affected
+    field = ones(ComplexF64, 3, 2)
+    @test field + b == b + field == [3 1; 1 1; 1 1]
+    @test field - b == [-1 1; 1 1; 1 1]
+    @test b - field == [1 -1; -1 -1; -1 -1]
+
+    d = Domain(16; L=2π)
+    @test build_operator(Val(:spectral_constant), d; val=4).value == 4
+end

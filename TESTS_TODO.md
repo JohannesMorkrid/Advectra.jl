@@ -37,6 +37,13 @@ Suggested order: A → B → C → D → E → F → G.
 - [x] **A9. `radial_flux`/`poloidal_flux` return a complex number** (tiny imaginary part from
   `parseval_integral` of `a .* conj(b)`). Should return `real(...)`. — **15 min**
 
+- [ ] **A10. MSS3 is only second order in practice.** It starts with one MSS1 and one MSS2
+  step, and the first-order start-up error dominates: with an exact start it is third order
+  and ~250× more accurate at dt = 0.025. See bug 10 in `BUGS.md` for the proposed fix. —
+  **1–2 h**
+- [ ] **A11. `Source` (`src/operators/sources.jl`) is an empty struct** without methods, so
+  it can't be used or tested yet. Implement or remove. — **?**
+
 ## B. Test infrastructure
 
 - [x] **B1. Restructure `runtests.jl`.** Include every test file, each in its own
@@ -107,26 +114,26 @@ the CPU versions as new files in `test/` and add them to `TEST_FILES` in `runtes
 
 ## E. New tests for untested core functionality
 
-- [ ] **E1. Time-stepper convergence.** Run MSS1, MSS2 and MSS3 on linear diffusion, halve
+- [x] **E1. Time-stepper convergence.** Run MSS1, MSS2 and MSS3 on linear diffusion, halve
   `dt`, and check that the error slopes are ≈ 1/2/3. Cover in-place and out-of-place
   right-hand sides (the out-of-place caches are untested). — **3–4 h**
-- [ ] **E2. Checkpoint/resume round trip.** Solve to T/2, resume to T, and compare with
+- [x] **E2. Checkpoint/resume round trip.** Solve to T/2, resume to T, and compare with
   solving straight to T. `resume=true` must reject a mismatched domain
   (`validate_resume_attributes`). — **2–3 h**
-- [ ] **E3. HDF5 output layout.** Check the groups, attributes, strides, `storage_limit`,
+- [x] **E3. HDF5 output layout.** Check the groups, attributes, strides, `storage_limit`,
   `simulation_name` handling and `physical_transform`. — **2 h**
-- [ ] **E4. Operators.** Poisson bracket on analytic fields, `quadratic_term` vs a
+- [x] **E4. Operators.** Poisson bracket on analytic fields, `quadratic_term` vs a
   physical-space product with and without dealiasing, the `reciprocal`/`spectral_exp`/
   `spectral_expm1`/`spectral_log` functions, and `SpectralConstant`/`Source`
   (`sources.jl`, 0% covered). — **3 h**
-- [ ] **E5. `@diagnostics` macro and `required_operators`.** Cover vector, block and single
+- [x] **E5. `@diagnostics` macro and `required_operators`.** Cover vector, block and single
   forms, check that the alias syntax errors, and that operators are pulled in
   (regression test for A3). — **1 h**
-- [ ] **E6. Profiles.** Profile values for an analytic field, plus construction through
+- [x] **E6. Profiles.** Profile values for an analytic field, plus construction through
   `@diagnostics` (after A2). — **1 h**
-- [ ] **E7. Sample diagnostics.** Cover density, vorticity, temperature and potential
+- [x] **E7. Sample diagnostics.** Cover density, vorticity, temperature and potential
   (`sample.jl`, 14% covered). — **45 min**
-- [ ] **E8. `SpectralODEProblem`.** Operator recipes (`:default`, `:all`, custom),
+- [x] **E8. `SpectralODEProblem`.** Operator recipes (`:default`, `:all`, custom),
   `convert_parameters` precision conversion, `isinplace` detection and `show`. — **2 h**
 
 ## F. Utilities and extensions

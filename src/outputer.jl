@@ -707,8 +707,9 @@ function determine_strides(initial_samples, prob::SpectralODEProblem, total_stor
         N_samples,
         stride = determine_sampling_strategy(sample, stride, storage_limit, prob;
                                              context=context)
-        # Determine the needed storage
-        storage_requirement = compute_storage_need(N_samples, stride, sample; context)
+        # Determine the needed storage, based on the number of steps (not samples)
+        storage_requirement = compute_storage_need(compute_number_of_steps(prob), stride,
+                                                   sample; context)
         # Accumulate
         total_storage_requirement += storage_requirement
         push!(strides, stride)
