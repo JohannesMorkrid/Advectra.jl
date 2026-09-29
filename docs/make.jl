@@ -27,7 +27,7 @@ makedocs(; sitename="Advectra.jl",
                  "Solver.md"
              ], # Examples
              "Extensions" => "extensions.md",
-             "Contributing" => "contributor-guide.md",
+             "Style guide" => "style-guide.md",
              "API" => "API.md"])
 
 deploydocs(; repo="github.com/JohannesMorkrid/Advectra.jl")
