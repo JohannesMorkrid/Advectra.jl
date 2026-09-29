@@ -157,3 +157,21 @@ end
     d = Domain(16; L=2π)
     @test build_operator(Val(:spectral_constant), d; val=4).value == 4
 end
+
+@testset "Float32 precision" begin
+    results = map((Float32, Float64)) do T
+        d = Domain(16, 12; Lx=2π, Ly=4π, precision=T)
+        x, y = d.x', d.y
+        F(u) = fwd_plan(d) * u
+        operators = build_operators(d; operators=:all)
+        u_hat = F(@. 1.5 + 0.3 * sin(x) * cos(y / 2))
+        v_hat = F(@. cos(x) + sin(y / 2))
+        [operators.diff_x(u_hat), operators.laplacian(u_hat),
+         operators.solve_phi(u_hat, v_hat), operators.quadratic_term(u_hat, v_hat),
+         operators.poisson_bracket(u_hat, v_hat), operators.spectral_log(u_hat)]
+    end
+    for (result32, result64) in zip(results...)
+        @test eltype(result32) == ComplexF32
+        @test result32 ≈ result64 rtol = 1e-5
+    end
+end

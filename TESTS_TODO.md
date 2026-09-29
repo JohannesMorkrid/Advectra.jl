@@ -138,16 +138,18 @@ the CPU versions as new files in `test/` and add them to `TEST_FILES` in `runtes
 
 ## F. Utilities and extensions
 
-- [ ] **F1. Initial conditions.** Each `initial_condition` function gives the right shape
+- [x] **F1. Initial conditions.** Each `initial_condition` function gives the right shape
   and element type, including `isolated_blob`/`isolated_temperature_blob` `:lin`/`:log`
   and `@nobroadcast`. — **1.5 h**
-- [ ] **F2. Mode removal.** `remove_zonal/streamer/asymmetric/nyquist_modes!` zero the
+- [x] **F2. Mode removal.** `remove_zonal/streamer/asymmetric/nyquist_modes!` zero the
   correct entries for real and complex transforms. — **1 h**
-- [ ] **F3. `add_constant(!)`, `logspace`, `spectral_sum` edge cases.** — **30 min**
-- [ ] **F4. Float32 coverage.** Parameterise the core operator and solver tests over
+- [x] **F3. `add_constant(!)`, `logspace`, `spectral_sum` edge cases.** — **30 min**
+- [x] **F4. Float32 coverage.** Parameterise the core operator and solver tests over
   `Float32` and `Float64`. — **1 h**
-- [ ] **F5. SMTPClient extension.** Test with the network send stubbed out. — **1 h**
-- [ ] **F6. ComponentArrays extension.** A ComponentArray state through
+- [x] **F5. SMTPClient extension.** Test with the network send stubbed out. — **1 h**
+  Done without calling `send_mail`: the SMTP URL is hard-coded, so the send can't be
+  stubbed, and a test could send a real mail with the user's `ext/.env` credentials.
+- [x] **F6. ComponentArrays extension.** A ComponentArray state through
   `SpectralODEProblem` and `spectral_solve` (regression test for A4). — **1 h**
 
 ## G. CI and tooling

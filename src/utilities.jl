@@ -32,13 +32,12 @@ macro nobroadcast(expr)
 
     fname isa Symbol || throw(ArgumentError("Unsupported function signature"))
 
-    trait = quote
-        broadcastable_ic(::typeof($fname)) = Val(false)
-    end
+    # Extends Advectra's trait, so the macro also works when used outside of Advectra
+    trait = :($(@__MODULE__).broadcastable_ic(::typeof($(esc(fname)))) = Val(false))
 
     return quote
         Base.@__doc__ $(esc(expr))
-        $(esc(trait))
+        $trait
     end
 end
 
@@ -133,7 +132,7 @@ f(x,y) = \\sin\\left(\\frac{2\\pi N_x x}{l_x}\\right)\\cos\\left(\\frac{2\\pi N_
 - `Nx`, `Ny`: Wave-numbers in x and y (default `(1, 1)`)
 """
 function sinusoidal(x, y; lx=1, ly=1, Nx=1, Ny=1)
-    sin(2 * π * Nx * x / lx) * cos(2 * π * Ny * y / ly)
+    sinpi(2 * Nx * x / lx) * cospi(2 * Ny * y / ly)
 end
 """
     sinusoidal_x(x, y; L=1, N=1)
@@ -147,7 +146,7 @@ f(x,y) = \\sin{\\left(\\frac{2\\pi Nx}{L}\\right)}
 - `L`: Domain size in x (default `1`)
 - `N`: Wave-number in x (default `1`)
 """
-sinusoidal_x(x, y; L=1, N=1) = sin(2 * π * N * x / L)
+sinusoidal_x(x, y; L=1, N=1) = sinpi(2 * N * x / L)
 
 """
     sinusoidal_y(x, y; L=1, N=1)
@@ -161,7 +160,7 @@ f(x,y) = \\sin{\\left(\\frac{2\\pi Ny}{L}\\right)}
 - `L`: Domain size in y (default `1`)
 - `N`: Wave-number in y (default `1`)
 """
-sinusoidal_y(x, y; L=1, N=1) = sin(2 * π * N * y / L)
+sinusoidal_y(x, y; L=1, N=1) = sinpi(2 * N * y / L)
 
 """
     exponential_x(x, y; κ=1)
@@ -188,7 +187,7 @@ f(x,y) = \\begin{cases}
          \\end{cases}
 ```
 """
-quadratic_y(x, y) = abs(y) <= 1 ? 1 - y .^ 2 : 0.0
+quadratic_y(x, y) = abs(y) <= 1 ? 1 - y^2 : zero(y)
 
 """
     white_noise(x, y; σ=1)
@@ -199,7 +198,7 @@ Complex-valued spatial white noise field.
 f(x,y) = \\sigma (a + ib), \\quad a,b \\sim \\mathcal{N}(0,1)
 ```
 """
-white_noise(x, y; σ=1) = σ * randn(ComplexF64)
+white_noise(x, y; σ=1) = σ * randn(complex(float(typeof(x))))
 
 """
     random_phase(domain::AbstractDomain; value=1e-6, ndims=1)
@@ -277,14 +276,14 @@ end
 
 function isolated_blob(domain::AbstractDomain, ::Val{:lin}; ndims=2, kwargs...)
     u0 = initial_condition(gaussian, domain; kwargs...)
-    ic = zeros(size(u0)..., ndims)
+    ic = zeros(eltype(u0), size(u0)..., ndims)
     selectdim(ic, 3, 1) .= u0
     return ic
 end
 
 function isolated_blob(domain::AbstractDomain, ::Val{:log}; ndims=2, kwargs...)
     u0 = initial_condition(log_gaussian, domain; kwargs...)
-    ic = zeros(size(u0)..., ndims)
+    ic = zeros(eltype(u0), size(u0)..., ndims)
     selectdim(ic, 3, 1) .= u0
     return ic
 end
@@ -310,7 +309,7 @@ end
 
 function isolated_temperature_blob(domain::AbstractDomain, ::Val{:lin}; ndims=3, kwargs...)
     u0 = initial_condition(gaussian, domain; kwargs...)
-    ic = zeros(size(u0)..., ndims)
+    ic = zeros(eltype(u0), size(u0)..., ndims)
     selectdim(ic, 3, 1) .= 1.0
     selectdim(ic, 3, 3) .= u0
     return ic
@@ -318,7 +317,7 @@ end
 
 function isolated_temperature_blob(domain::AbstractDomain, ::Val{:log}; ndims=3, kwargs...)
     u0 = initial_condition(log_gaussian, domain; kwargs...)
-    ic = zeros(size(u0)..., ndims)
+    ic = zeros(eltype(u0), size(u0)..., ndims)
     selectdim(ic, 3, 1) .= 0.0
     selectdim(ic, 3, 3) .= u0
     return ic

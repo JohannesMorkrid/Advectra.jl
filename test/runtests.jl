@@ -14,7 +14,9 @@ const TEST_FILES = ["domain_tests.jl",
                     "progress_tests.jl",
                     "output_tests.jl",
                     "integration_tests.jl",
-                    "componentarrays_tests.jl"]
+                    "utilities_tests.jl",
+                    "componentarrays_tests.jl",
+                    "smtp_tests.jl"]
 
 # Show the testsets inside each file as well, e.g. ADVECTRA_TEST_VERBOSE=true
 const VERBOSE = get(ENV, "ADVECTRA_TEST_VERBOSE", "false") == "true"

@@ -69,3 +69,19 @@ end
 
     @test solve_error(scheme, 0.1, true) ≈ solve_error(scheme, 0.1, false)
 end
+
+@testset "Float32 precision" begin
+    # The same run in single and double precision
+    solutions = map((Float32, Float64)) do T
+        d = Domain(8; L=2π, precision=T)
+        prob = SpectralODEProblem(Linear!, NonLinear!, @.(cos(d.x') * sin(2 * d.y)), d,
+                                  [0.0, 1.0]; p=parameters, dt=0.05)
+        cache = get_cache(prob, MSS3())
+        for step in 0:19
+            perform_step!(cache, prob, step * 0.05)
+        end
+        cache.u
+    end
+    @test eltype(first(solutions)) == ComplexF32
+    @test first(solutions) ≈ last(solutions) rtol = 1e-5
+end
