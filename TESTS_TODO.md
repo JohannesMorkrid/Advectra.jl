@@ -8,11 +8,11 @@ Suggested order: A → B → C → D → E → F → G.
 
 ## A. Source bugs found while reviewing (fix before writing tests for these areas)
 
-- [ ] **A1. Spectrum defaults use `Val{:radial}` (a type) instead of `Val(:radial)`.**
+- [x] **A1. Spectrum defaults use `Val{:radial}` (a type) instead of `Val(:radial)`.**
   `kinetic_energy_spectrum`, `flux_spectrum`, `enstrophy_spectrum` and
   `electrostatic_potential_spectrum` throw a `MethodError` when called without a spectrum
   (`src/diagnostics/spectral.jl:218`, `:257`, `:295`, `:327`). — **15 min**
-- [ ] **A2. Profiles slice the wrong dimension.** All functions in
+- [x] **A2. Profiles slice the wrong dimension.** All functions in
   `src/diagnostics/profiles.jl` use `ndims(prob.domain)` instead of `ndims(prob.domain) + 1`
   (`radial_density_profile` returns a 2×1 matrix). `radial_flux_profile` calls the
   non-existent `vExB`. None of them has a `build_diagnostic`, so they can't be used in
@@ -27,6 +27,15 @@ Suggested order: A → B → C → D → E → F → G.
   **5 min**
 - [ ] **A6. `Domain` has no explicit size check.** `Domain(-64)` only throws via
   `LinRange`. Add `Nx > 0 && Ny > 0 || throw(ArgumentError(...))`. — **10 min**
+- [ ] **A7. `SpectralODEProblem` without `p` can't be written to HDF5.** The default
+  `NullParameters` has no `keys`, so `Output` throws a `MethodError` when writing the
+  parameter attributes. Workaround in `test/profile_tests.jl` (passes a dummy `p`). —
+  **30 min**
+- [ ] **A8. `Output(prob; store_hdf=false)` crashes.** `setup_hdf5_storage` calls
+  `rm(simulation.file.filename)` even when `simulation` is `nothing`
+  (`src/outputer.jl:146`). — **15 min**
+- [ ] **A9. `radial_flux`/`poloidal_flux` return a complex number** (tiny imaginary part from
+  `parseval_integral` of `a .* conj(b)`). Should return `real(...)`. — **15 min**
 
 ## B. Test infrastructure
 
@@ -148,11 +157,11 @@ Suggested order: A → B → C → D → E → F → G.
 
 | Section | Estimate |
 |---|---|
-| A. Source bugs | ~2.5–3.5 h |
+| A. Source bugs | ~3.5–4.5 h |
 | B. Infrastructure | ~3.5 h |
 | C. Fix running tests | ~3.5 h |
 | D. Rewrite scratch tests | ~17–21 h |
 | E. New core tests | ~15–17 h |
 | F. Utilities & extensions | ~6 h |
 | G. CI & tooling | ~2.5 h required, +4–6 h optional |
-| **Total** | **~50–57 h required, plus ~4–6 h optional** |
+| **Total** | **~51–58 h required, plus ~4–6 h optional** |
