@@ -39,23 +39,23 @@ Suggested order: A → B → C → D → E → F → G.
 
 ## B. Test infrastructure
 
-- [ ] **B1. Restructure `runtests.jl`.** Include every test file, each in its own
+- [x] **B1. Restructure `runtests.jl`.** Include every test file, each in its own
   `@testset`/module (or use `SafeTestsets.jl`) so files can't depend on each other's
   imports. — **1 h**
-- [ ] **B2. Clean up test dependencies.** Use only `test/Project.toml` (drop `[extras]` from
+- [x] **B2. Clean up test dependencies.** Use only `test/Project.toml` (drop `[extras]` from
   the main `Project.toml`) and add HDF5, ComponentArrays and SMTPClient. — **30 min**
-- [ ] **B3. Run integration tests with `debug=true`.** `spectral_solve` swallows exceptions
+- [x] **B3. Run integration tests with `debug=true`.** `spectral_solve` swallows exceptions
   by default, so a crashing solve can still pass. — **10 min**
-- [ ] **B4. Write test output to a temp dir.** Use `mktempdir()` (or `store_hdf=false`)
+- [x] **B4. Write test output to a temp dir.** Use `mktempdir()` (or `store_hdf=false`)
   instead of writing `.h5` files into `test/output/`. — **20 min**
-- [ ] **B5. Run plot tests headless.** Set `ENV["GKSwstype"] = "100"` at the top of
+- [x] **B5. Run plot tests headless.** Set `ENV["GKSwstype"] = "100"` at the top of
   `runtests.jl`, before Plots/Advectra is loaded, so the 21 plots in `display_tests.jl`
   render off-screen instead of opening windows or failing on CI. — **10 min**
-- [ ] **B6. Move GPU tests to `test/gpu/`.** Run them only when `CUDA.functional()` is true
+- [x] **B6. Move GPU tests to `test/gpu/`.** Run them only when `CUDA.functional()` is true
   or an env flag is set, and keep them out of the default CI run. — **1 h**
-- [ ] **B7. Rename `progressbar_test.jl` → `progress_tests.jl`** for consistent naming. —
+- [x] **B7. Rename `progressbar_test.jl` → `progress_tests.jl`** for consistent naming. —
   **5 min**
-- [ ] **B8. Delete `test/testutilities.jl`.** It is completely outdated (old `Output` API,
+- [x] **B8. Delete `test/testutilities.jl`.** It is completely outdated (old `Output` API,
   `domain.SC`, Roots and PlotlyJS). Port the two convergence helpers into C1 if they are
   useful. — **15 min**
 
@@ -64,7 +64,7 @@ Suggested order: A → B → C → D → E → F → G.
 - [ ] **C1. `integration_tests.jl`.** Compare linear diffusion against the exact solution
   `û(t) = û₀·exp(ν k² t)` instead of hard-coded matrices. Keep the non-linear case as a
   regression test, but drop the redundant second assertion and the `println`. — **2 h**
-- [ ] **C2. `progressbar_test.jl`.** Fix the loop time (`i*dt` → `i`), remove the `sleep`s
+- [ ] **C2. `progress_tests.jl`.** Fix the loop time (`i*dt` → `i`), remove the `sleep`s
   and `@test true`, and import `build_diagnostic` explicitly. — **20 min**
 - [ ] **C3. `operator_tests.jl`.** Remove the `try`/`catch` around GradDotGrad and use a case
   with a nonzero expected result. — **45 min**
@@ -73,6 +73,9 @@ Suggested order: A → B → C → D → E → F → G.
   from A6. — **30 min**
 
 ## D. Rewrite the scratch test files that never run (CPU, real assertions)
+
+The original GPU scripts now live in `test/gpu/` (run with `ADVECTRA_TEST_GPU=true`). Write
+the CPU versions as new files in `test/` and add them to `TEST_FILES` in `runtests.jl`.
 
 - [ ] **D1. `cfl_tests.jl`.** Cover every component mode × ExB/burger velocity, compare
   against a hand-computed CFL for a known velocity field, and check the `silent` flag and

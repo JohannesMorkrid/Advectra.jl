@@ -20,10 +20,10 @@ using Advectra
                               diagnostics=diagnostics, operators=:all)
 
     # Set up output path and run the simulation
-    output_file_name = joinpath(@__DIR__, "output", "linear diffusion.h5")
+    output_file_name = joinpath(mktempdir(), "linear diffusion.h5")
     output = Output(prob; filename=output_file_name, simulation_name=:parameters)
 
-    sol = spectral_solve(prob, MSS3(), output)
+    sol = spectral_solve(prob, MSS3(), output; debug=true)
 
     # Extract the final time-step data
     final_data = sol.simulation["Density/data"][:, :, end]
@@ -79,12 +79,12 @@ end
         @views U[:, :, 1] .= exp.(U[:, :, 1]) .- 1
     end
 
-    output_file_name = joinpath(@__DIR__, "output", "non-linear diffusion.h5")
+    output_file_name = joinpath(mktempdir(), "non-linear diffusion.h5")
     output = Output(prob; filename=output_file_name,
                     physical_transform=(inverse_transform!))
 
     # Solve and plot
-    sol = spectral_solve(prob, MSS3(), output)
+    sol = spectral_solve(prob, MSS3(), output; debug=true)
 
     final_data = sol.simulation["Density/data"][:, :, end]
     println("Final data: ", final_data)

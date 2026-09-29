@@ -1,7 +1,9 @@
 # ------------------------------------------------------------------------------------------
 #                                Progressbar Diagnostic Test                                
 # ------------------------------------------------------------------------------------------
+using Test
 using Advectra
+import Advectra: build_diagnostic
 
 @testset "Diagnostics and Progress" begin
     Nx, Ny = 256, 256
