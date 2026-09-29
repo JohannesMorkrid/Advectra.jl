@@ -130,7 +130,7 @@ end
         # Perform step using MSS1
         cache1 = get_cache(prob, MSS1())
         perform_step!(cache1, prob, t)
-        k0 = N(u0, p, t)
+        cache.k0 = N(u0, p, t)
         cache.u = cache1.u
     else
         k1 = N(u, p, t)
@@ -256,7 +256,7 @@ end
         # Perform step using MSS1
         cache1 = get_cache(prob, MSS1())
         perform_step!(cache1, prob, t)
-        k0 = N(u0, p, t)
+        cache.k0 = N(u0, p, t)
         cache.u1 = cache1.u
         cache.u = cache.u1 # For output handling
     elseif cache.step == 2

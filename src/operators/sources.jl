@@ -31,8 +31,8 @@ end
 
 Base.:*(sc::SpectralConstant, c::Number) = SpectralConstant(; val=sc.value * c)
 Base.:*(c::Number, sc::SpectralConstant) = SpectralConstant(; val=c * sc.value)
-Base.:/(sc::SpectralConstant, c::Number) = SpectralConstant(; val=sc.value * c)
-Base.:/(c::Number, sc::SpectralConstant) = SpectralConstant(; val=c * sc.value)
+Base.:/(sc::SpectralConstant, c::Number) = SpectralConstant(; val=sc.value / c)
+Base.:/(c::Number, sc::SpectralConstant) = SpectralConstant(; val=c / sc.value)
 Base.:-(sc::SpectralConstant) = SpectralConstant(; val=-sc.value)
 
 # ---------------------------- SpectralConstant-Array Methods ------------------------------
@@ -49,7 +49,7 @@ function Base.:-(field::AbstractArray, sc::SpectralConstant)
     @allowscalar out[1] -= sc.value
     return out
 end
-Base.:-(sc::SpectralConstant, field::AbstractArray) = Base.:+(field, sc)
+Base.:-(sc::SpectralConstant, field::AbstractArray) = Base.:+(-field, sc)
 
 # ------------------------------------------------------------------------------------------
 #                                          Sources                                          
