@@ -35,6 +35,11 @@ Domain_set = [d1, d2, d3, d4, d5, d6, d7]
     @test getproperty(d4, :real_transform) === true
 
     @test lengths(d1) == (1.0, 1.0)
+
+    # Helpers return (y, x) order, matching the (Ny, Nx) array layout
+    @test lengths(d4) == (d4.Ly, d4.Lx) == (1.0, 2.0)
+    @test size(d4) == (d4.Ny, d4.Nx)
+    @test get_points(d4) == (d4.y, d4.x)
 end
 
 @testset "Wave vectors" for a_domain in Domain_set
@@ -55,8 +60,9 @@ end
 end
 
 @testset "Differential elements" begin
-    d1 = Domain(256, 256; Lx=1, Ly=1)
-    differential_elements(d1) == (d1.dx, d1.dy)
+    d1 = Domain(128, 256; Lx=2, Ly=1)
+    @test differential_elements(d1) == (d1.dy, d1.dx)
+    @test d1.dx ≈ d1.Lx / d1.Nx && d1.dy ≈ d1.Ly / d1.Ny
     @test diff(d1.x)[end] ≈ d1.dx && diff(d1.y)[end] ≈ d1.dy
 end
 

@@ -29,7 +29,7 @@ AdvectraSMTPClientExt = "SMTPClient"
 
 [compat]
 Adapt = "4.4.0"
-ComponentArrays = "0.15.29"
+ComponentArrays = "0.15"
 Dates = "1"
 FFTW = "1"
 GPUArrays = ">=10"

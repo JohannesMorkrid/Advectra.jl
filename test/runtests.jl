@@ -14,9 +14,12 @@ const TEST_FILES = ["domain_tests.jl",
                     "integration_tests.jl",
                     "componentarrays_tests.jl"]
 
+# Show the testsets inside each file as well, e.g. ADVECTRA_TEST_VERBOSE=true
+const VERBOSE = get(ENV, "ADVECTRA_TEST_VERBOSE", "false") == "true"
+
 # Each file is included in its own module, so files can not depend on each other's imports
-@testset "Advectra" begin
-    @testset "$file" for file in TEST_FILES
+@testset "Advectra" verbose=true begin
+    @testset "$file" verbose=VERBOSE for file in TEST_FILES
         Base.include(Module(), joinpath(@__DIR__, file))
     end
 

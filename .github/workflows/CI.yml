@@ -23,8 +23,9 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - "1.11"
-          - "1.9"
+          - "min" # lowest version allowed by the julia compat in Project.toml
+          - "1.12"
+          - "1" # latest stable release
           - "pre"
         os:
           - ubuntu-latest

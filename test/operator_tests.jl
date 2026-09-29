@@ -62,34 +62,27 @@ Domain_set = [d1, d2, d3]
 
         diff_x = build_operator(Val(:diff_x), d)
         diff_y = build_operator(Val(:diff_y), d)
+        q_term = build_operator(Val(:quadratic_term), d)
+        gdg = build_operator(Val(:grad_dot_grad), d;
+                             diff_x=diff_x, diff_y=diff_y, quadratic_term=q_term)
 
-        # Wrap in try-catch in case QuadraticTerm isn't fully implemented yet
-        try
-            q_term = build_operator(Val(:quadratic_term), d)
-            gdg = build_operator(Val(:grad_dot_grad), d;
-                                 diff_x=diff_x, diff_y=diff_y, quadratic_term=q_term)
+        k0x = 2π / d.Lx
+        k0y = 2π / d.Ly
 
-            # Test with simple smooth fields
-            u_phys = @. cos(2π * d.x' / d.Lx) + 0*d.y
-            v_phys = @. sin(2π * d.y / d.Ly) + 0*d.x'
+        # Orthogonal gradients: ∇u = (∂u/∂x, 0) and ∇v = (0, ∂v/∂y) ⇒ ∇u⋅∇v = 0
+        u_phys = @. cos(k0x * d.x') + 0 * d.y
+        v_phys = @. sin(k0y * d.y) + 0 * d.x'
+        res_phys = Array(bwd * gdg(fwd * (u_phys |> array_wrapper(d)),
+                                   fwd * (v_phys |> array_wrapper(d))))
+        @test all(isapprox.(res_phys, 0.0; atol=1e-10))
 
-            u_spec = fwd * (u_phys |> array_wrapper(d))
-            v_spec = fwd * (v_phys |> array_wrapper(d))
-
-            # Check if calling the operator works
-            res_spec = gdg(u_spec, v_spec)
-            res_phys = Array(bwd * res_spec)
-
-            # For these orthogonal inputs, the dot product should be zero
-            @test all(isapprox.(res_phys, 0.0; atol=1e-10))
-
-        catch e
-            if e isa MethodError || e isa UndefVarError
-                @warn "Skipping GradDotGrad: QuadraticTerm dependency not met."
-            else
-                rethrow(e)
-            end
-        end
+        # u = sin(k0x x), v = sin(k0x x) + cos(k0y y) ⇒ ∇u⋅∇v = k0x²cos²(k0x x)
+        u_phys = @. sin(k0x * d.x') + 0 * d.y
+        v_phys = @. sin(k0x * d.x') + cos(k0y * d.y)
+        res_phys = Array(bwd * gdg(fwd * (u_phys |> array_wrapper(d)),
+                                   fwd * (v_phys |> array_wrapper(d))))
+        expected = @. k0x^2 * cos(k0x * d.x')^2 + 0 * d.y
+        @test isapprox(res_phys, expected; atol=1e-10)
     end
 end
 
