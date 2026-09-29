@@ -20,7 +20,7 @@ Suggested order: A → B → C → D → E → F → G.
 - [x] **A3. CFL never requests its operators.** `requires_operator(::Val{cfl}; velocity_method)`
   should be `requires_operator(::Val{:cfl}; velocity=:ExB, kwargs...)`
   (`src/diagnostics/CFL.jl:155`). — **15 min**
-- [ ] **A4. ComponentArrays extension has the wrong argument order.**
+- [x] **A4. ComponentArrays extension has the wrong argument order.**
   `_spectral_transform!(du, u::ComponentArray, p)` should be `(du, p, u::ComponentArray)`,
   including the inner call (`ext/AdvectraComponentArraysExt.jl`). — **30 min** (+ test in F6)
 - [ ] **A5. Delete dead `src/rhs.jl`.** It isn't included anywhere and doesn't compile. —
