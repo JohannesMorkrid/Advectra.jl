@@ -1,25 +1,29 @@
 # ------------------------------------------------------------------------------------------
-#                                Progressbar Diagnostic Test                                
+#                                 Progress Diagnostic Tests
 # ------------------------------------------------------------------------------------------
+
 using Test
 using Advectra
 import Advectra: build_diagnostic
 
-@testset "Diagnostics and Progress" begin
-    Nx, Ny = 256, 256
-    domain = Domain(Nx, Ny)
+@testset "Progress diagnostic" begin
+    domain = Domain(16)
     prob = (; domain=domain)
-    tspan = (0.0, 1.0) # Use a tuple for standard tspan convention
+    tspan = (0.0, 1.0)
     dt = 1e-1
 
-    ic = initial_condition(isolated_blob, domain)
-    ic_hat = spectral_transform(ic, fwd_plan(domain))
+    state_hat = spectral_transform(initial_condition(isolated_blob, domain), fwd_plan(domain))
 
     progress = build_diagnostic(Val(:progress); tspan=tspan, dt=dt)
-    for i in 0.0:dt:1.0
-        progress(ic_hat, prob, i*dt)
-        sleep(0.005)
-    end
+    @test progress.name == "Progress"
+    @test !progress.stores_data
+    @test progress.assumes_spectral_state
 
-    @test true # Dummy test to keep the set valid
+    # The progress bar counts the number of steps taken since tspan[1]
+    progress_bar = only(progress.args)
+    @test progress_bar.n == 10
+    for step in 0:10
+        progress(state_hat, prob, first(tspan) + step * dt)
+        @test progress_bar.counter == step
+    end
 end

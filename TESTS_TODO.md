@@ -61,14 +61,14 @@ Suggested order: A → B → C → D → E → F → G.
 
 ## C. Fix the tests that currently run
 
-- [ ] **C1. `integration_tests.jl`.** Compare linear diffusion against the exact solution
+- [x] **C1. `integration_tests.jl`.** Compare linear diffusion against the exact solution
   `û(t) = û₀·exp(ν k² t)` instead of hard-coded matrices. Keep the non-linear case as a
   regression test, but drop the redundant second assertion and the `println`. — **2 h**
-- [ ] **C2. `progress_tests.jl`.** Fix the loop time (`i*dt` → `i`), remove the `sleep`s
+- [x] **C2. `progress_tests.jl`.** Fix the loop time (`i*dt` → `i`), remove the `sleep`s
   and `@test true`, and import `build_diagnostic` explicitly. — **20 min**
-- [ ] **C3. `operator_tests.jl`.** Remove the `try`/`catch` around GradDotGrad and use a case
+- [x] **C3. `operator_tests.jl`.** Remove the `try`/`catch` around GradDotGrad and use a case
   with a nonzero expected result. — **45 min**
-- [ ] **C4. `domain_tests.jl`.** Add the missing `@test` on line 59, check the
+- [x] **C4. `domain_tests.jl`.** Add the missing `@test` on line 59, check the
   `lengths`/`differential_elements` order with Lx ≠ Ly, and test the explicit size check
   from A6. — **30 min**
 
