@@ -141,7 +141,7 @@ function setup_hdf5_storage(prob, t0;
     simulation = setup_simulation_group(filename, simulation_name, prob; resume=resume,
                                         store_hdf=store_hdf, h5_kwargs=h5_kwargs)
 
-    if !resume
+    if store_hdf && !resume
         # if file already exists it will be deleted and must be created again
         rm(simulation.file.filename)
         simulation = setup_simulation_group(filename, simulation_name, prob; resume=false,
@@ -252,16 +252,15 @@ end
 """
     write_attributes(simulation, prob::SpectralODEProblem)
     write_attributes(simulation, domain::AbstractDomain)
+    write_attributes(simulation, parameters)
 
-  Writes the esential attributes of the container to the simulation group `simulation`. The 
-  `SpectralODEProblem` also writes the `domain` properties.
+  Writes the esential attributes of the container to the simulation group `simulation`. The
+  `SpectralODEProblem` also writes the `domain` properties and the `parameters`.
 """
 function write_attributes(simulation, prob::SpectralODEProblem)
     write_attribute(simulation, "dt", prob.dt)
     write_attributes(simulation, prob.domain)
-    for (key, val) in pairs(prob.p)
-        write_attribute(simulation, string(key), val)
-    end
+    write_attributes(simulation, prob.p)
 
     # Store the config file used to create the Output struct
     configfile = Base.source_path()
@@ -278,6 +277,15 @@ function write_attributes(simulation, domain::AbstractDomain)
         write_attribute(simulation, string(attribute), getproperty(domain, attribute))
     end
 end
+
+function write_attributes(simulation, parameters)
+    for (key, val) in pairs(parameters)
+        write_attribute(simulation, string(key), val)
+    end
+end
+
+# No parameters were given, so there is nothing to write
+write_attributes(simulation, ::NullParameters) = nothing
 
 function default_chunk(sample; scalar_target_bytes=64 * 1024,
                        array_target_bytes=1024 * 1024)
@@ -941,6 +949,8 @@ function parameter_string(parameters::P) where {P<:NamedTuple}
     tmp = [string(key, "=", value) for (key, value) in sort(collect(pairs(parameters)))]
     join(tmp, ", ")
 end
+
+parameter_string(::NullParameters) = "no parameters"
 
 """
     assert_no_nan(u::AbstractArray, t)

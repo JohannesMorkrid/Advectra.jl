@@ -40,7 +40,10 @@ import Advectra: build_diagnostic, build_operator, required_operators
         Γ = radial_flux_profile(state_hat, prob, 0.0)
         @test Γ ≈ vec(@. -ky / (kx^2 + ky^2) * cos(kx * x)^2 / 2)
         # Averaging the profile over x must give the average radial flux
-        @test mean(Γ) ≈ real(build_diagnostic(Val(:radial_flux))(state_hat, prob, 0.0))
+        Γ_mean = build_diagnostic(Val(:radial_flux))(state_hat, prob, 0.0)
+        @test Γ_mean isa Real
+        @test mean(Γ) ≈ Γ_mean
+        @test build_diagnostic(Val(:poloidal_flux))(state_hat, prob, 0.0) isa Real
     end
 
     @testset "Construction through @diagnostics" begin
@@ -51,9 +54,8 @@ import Advectra: build_diagnostic, build_operator, required_operators
 
         Linear(du, u, operators, p, t) = du .= 0
         NonLinear(du, u, operators, p, t) = du .= 0
-        # TODO p is required, NullParameters can not be written to HDF5 (see TESTS_TODO A7)
         sim = SpectralODEProblem(Linear, NonLinear, state, domain, [0.0, 0.01];
-                                 p=(ν=0.0,), dt=1e-3, diagnostics=recipes)
+                                 dt=1e-3, diagnostics=recipes)
         mktempdir() do dir
             output = Output(sim; filename=joinpath(dir, "profiles.h5"))
             @test spectral_solve(sim, MSS3(), output; debug=true) isa Output

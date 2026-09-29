@@ -117,6 +117,8 @@ end
 
     # Test non-positive dimensions
     @test_throws ArgumentError Domain(-64; L=1.0)
+    @test_throws ArgumentError Domain(0)
+    @test_throws ArgumentError Domain(64, 0)
 end
 
 @testset "Precision Stability" begin

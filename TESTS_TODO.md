@@ -23,18 +23,18 @@ Suggested order: A → B → C → D → E → F → G.
 - [x] **A4. ComponentArrays extension has the wrong argument order.**
   `_spectral_transform!(du, u::ComponentArray, p)` should be `(du, p, u::ComponentArray)`,
   including the inner call (`ext/AdvectraComponentArraysExt.jl`). — **30 min** (+ test in F6)
-- [ ] **A5. Delete dead `src/rhs.jl`.** It isn't included anywhere and doesn't compile. —
+- [x] **A5. Delete dead `src/rhs.jl`.** It isn't included anywhere and doesn't compile. —
   **5 min**
-- [ ] **A6. `Domain` has no explicit size check.** `Domain(-64)` only throws via
+- [x] **A6. `Domain` has no explicit size check.** `Domain(-64)` only throws via
   `LinRange`. Add `Nx > 0 && Ny > 0 || throw(ArgumentError(...))`. — **10 min**
-- [ ] **A7. `SpectralODEProblem` without `p` can't be written to HDF5.** The default
+- [x] **A7. `SpectralODEProblem` without `p` can't be written to HDF5.** The default
   `NullParameters` has no `keys`, so `Output` throws a `MethodError` when writing the
   parameter attributes. Workaround in `test/profile_tests.jl` (passes a dummy `p`). —
   **30 min**
-- [ ] **A8. `Output(prob; store_hdf=false)` crashes.** `setup_hdf5_storage` calls
+- [x] **A8. `Output(prob; store_hdf=false)` crashes.** `setup_hdf5_storage` calls
   `rm(simulation.file.filename)` even when `simulation` is `nothing`
   (`src/outputer.jl:146`). — **15 min**
-- [ ] **A9. `radial_flux`/`poloidal_flux` return a complex number** (tiny imaginary part from
+- [x] **A9. `radial_flux`/`poloidal_flux` return a complex number** (tiny imaginary part from
   `parseval_integral` of `a .* conj(b)`). Should return `real(...)`. — **15 min**
 
 ## B. Test infrastructure
