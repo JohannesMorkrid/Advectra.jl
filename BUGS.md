@@ -2,8 +2,10 @@
 
 Open bugs found while writing the tests in `TESTS_TODO.md`. Bugs 1–9 were found in
 section D: each one was reproduced, and a fix was written and verified at the time. Those
-changes were later reverted, so they are still open. Bug 10 was found in section E. Line
-numbers refer to the current code.
+changes were later reverted, so they are still open. Bug 10 was found in section E. Bugs 11
+and 12 were found by running the GPU scripts in `test/gpu/` on a CUDA machine. All of them
+already existed before this round of test work (commit `ac05e99`). Line numbers refer to the
+current code.
 
 Ordered roughly by impact.
 
@@ -226,3 +228,54 @@ extrapolation is the better option.
 **Test:** `test/schemes_tests.jl` currently checks that MSS3 is second order in a normal run,
 and third order with exact start-up values. Once this is fixed, the normal-run check should
 be changed to third order.
+
+---
+
+## 11. `memory_type` clashes with CUDA.jl
+
+**Where:** `src/Advectra.jl` (export list) and `src/domains/domain.jl` (`memory_type`).
+
+**What happens:** After `using Advectra, CUDA`, calling `memory_type` fails with
+`UndefVarError: memory_type not defined`. Julia adds the hint that two modules export
+different bindings with this name. The usual way to move data to the GPU,
+`u0 |> memory_type(domain, Physical())`, therefore breaks exactly when CUDA is loaded. This is
+also why 6 of the 7 GPU scripts fail at their first `memory_type` call.
+
+**Why:** CUDA.jl exports its own `memory_type` function. If two modules loaded with `using`
+export the same name, Julia refuses to pick one, so the name can only be used qualified
+(`Advectra.memory_type`). The export was added in #121 ("Domain refactoring"). The same PR
+changed the GPU scripts from `Advectra.memory_type(domain)`, which works alongside CUDA, to the
+unqualified name.
+
+**Workaround:** Write `Advectra.memory_type(...)`, or `import Advectra: memory_type`.
+
+**Fix (API decision):** Either rename the function (e.g. `field_type` or `array_type`) or
+stop exporting it and document the qualified form. Both change the public API.
+
+---
+
+## 12. The GPU scripts in `test/gpu/` are broken
+
+**Where:** `test/gpu/*.jl`, run with `ADVECTRA_TEST_GPU=true`.
+
+**What happens:** Plain run on an RTX 3050 (`CUDA.functional()` is true): 6 of 7 scripts fail
+at `memory_type` (bug 11). With `memory_type` imported explicitly, 4 still fail:
+
+| Script | Failure |
+|---|---|
+| `cfl_tests.jl:30` | `Unknown component: :something`: a deliberately invalid component, not wrapped in `@test_throws` |
+| `spectral_tests.jl:35` | `axis has to be either :kx, :ky, :both or :diag`: a deliberately invalid `axis=:all`, not wrapped in `@test_throws` |
+| `energy_integrals_tests.jl:69`, `:87` | `MethodError`: the removed `compute_density` keyword of `parsevals_theorem` (now `average`) |
+| `probe_tests.jl:17` | `FieldError: type Tuple has no field solve_phi`: the script passes `operators=()`, but `probe_all` needs `solve_phi` and `diff_y` |
+
+`COM_tests.jl`, `fluxes_tests.jl` and `vorticity_tests.jl` run through. Everything before the
+failing lines ran on the GPU without errors.
+
+**Why:** These are the old scratch scripts, moved unchanged in item B6 of `TESTS_TODO.md`.
+They contain no `@test`s, so even when they run, they only show that nothing throws, not that
+the GPU results are correct. CUDA.jl and Plots.jl are also not test dependencies, so
+`ADVECTRA_TEST_GPU=true` fails at `using CUDA` unless they are added by hand.
+
+**Fix:** Replace the scripts with a small GPU suite: rerun a selection of the CPU tests with
+`MemoryType=CuArray` and check that the results match the CPU ones. Give it its own
+`test/gpu/Project.toml` with CUDA.jl, so it can be run with a single command.
