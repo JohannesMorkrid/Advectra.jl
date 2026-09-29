@@ -17,7 +17,7 @@ Suggested order: A → B → C → D → E → F → G.
   (`radial_density_profile` returns a 2×1 matrix). `radial_flux_profile` calls the
   non-existent `vExB`. None of them has a `build_diagnostic`, so they can't be used in
   `@diagnostics`. — **1–2 h**
-- [ ] **A3. CFL never requests its operators.** `requires_operator(::Val{cfl}; velocity_method)`
+- [x] **A3. CFL never requests its operators.** `requires_operator(::Val{cfl}; velocity_method)`
   should be `requires_operator(::Val{:cfl}; velocity=:ExB, kwargs...)`
   (`src/diagnostics/CFL.jl:155`). — **15 min**
 - [ ] **A4. ComponentArrays extension has the wrong argument order.**

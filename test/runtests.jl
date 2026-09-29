@@ -10,6 +10,7 @@ using Test
     include("operator_tests.jl")
     include("spectrum_tests.jl")
     include("profile_tests.jl")
+    include("diagnostics_tests.jl")
 end
 
 # Test MMS1, MSS2, MSS3, perform_step!, get_cache, unpack_cache#
