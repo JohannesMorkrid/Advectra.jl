@@ -23,7 +23,7 @@ export OperatorRecipe, build_operators, build_operator # TODO perhaps remove and
 using ProgressMeter, Interpolations
 include("diagnostics/diagnostics.jl")
 export radial_density_profile, poloidal_density_profile, radial_vorticity_profile,
-       poloidal_vorticity_profile, poloidal_vorticity_profile, @diagnostics,
+       poloidal_vorticity_profile, radial_flux_profile, @diagnostics,
        DiagnosticRecipe
 export cfl, radial_COM, plot_density, plot_vorticity, plot_potential,
        potential_energy_integral, kinetic_energy_integral, zonal_kinetic_energy_integral,

@@ -115,6 +115,11 @@ struct Domain{T<:Number,
                     x0::Number=(-Lx / 2),
                     y0::Number=(-Ly / 2))
 
+        # Ensure a positive number of grid points
+        if Nx < 1 || Ny < 1
+            throw(ArgumentError("Nx and Ny must be positive, got Nx=$Nx and Ny=$Ny."))
+        end
+
         # Ensure MemoryType is not parameterized
         if MemoryType.var.name != :T
             throw(ArgumentError("MemoryType should not include type parameters (e.g., \

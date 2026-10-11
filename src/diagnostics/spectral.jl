@@ -215,7 +215,7 @@ end
   See [`energy_spectrum`](@ref) for `spectrum` type options.
 """
 function kinetic_energy_spectrum(state_hat::AbstractArray, prob, time,
-                                 spectrum=Val{:radial})
+                                 spectrum=Val(:radial))
     @unpack domain, operators = prob
     @unpack solve_phi, diff_x, diff_y = operators
     slices = eachslice(state_hat; dims=ndims(state_hat))
@@ -254,7 +254,7 @@ end
   
   See [`energy_spectrum`](@ref) for `spectrum` type options.
 """
-function flux_spectrum(state_hat::AbstractArray, prob, time, spectrum=Val{:poloidal})
+function flux_spectrum(state_hat::AbstractArray, prob, time, spectrum=Val(:poloidal))
     @unpack domain, operators = prob
     @unpack solve_phi, diff_y = operators
     slices = eachslice(state_hat; dims=ndims(state_hat))
@@ -292,7 +292,7 @@ end
   
   See [`energy_spectrum`](@ref) for `spectrum` type options.
 """
-function enstrophy_spectrum(state_hat::AbstractArray, prob, time, spectrum=Val{:radial})
+function enstrophy_spectrum(state_hat::AbstractArray, prob, time, spectrum=Val(:radial))
     @unpack domain = prob
     Ω_hat = eachslice(state_hat; dims=ndims(state_hat))[2]
     energy_spectrum(abs2.(Ω_hat), prob, time, spectrum) / 2
@@ -324,7 +324,7 @@ end
   See [`energy_spectrum`](@ref) for `spectrum` type options.
 """
 function electrostatic_potential_spectrum(state_hat::AbstractArray, prob, time,
-                                          spectrum=Val{:radial})
+                                          spectrum=Val(:radial))
     @unpack domain, operators = prob
     @unpack solve_phi = operators
 

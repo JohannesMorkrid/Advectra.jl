@@ -152,12 +152,12 @@ assumes_spectral(::Val{:burger}) = false
 # Default
 assumes_spectral(::Val{T}) where {T} = true
 
-function requires_operator(::Val{cfl}; velocity_method, kwargs...)
-    if velocity_method == :ExB
+function requires_operator(::Val{:cfl}; velocity=:ExB, kwargs...)
+    if velocity == :ExB
         return [OperatorRecipe(:diff_x), OperatorRecipe(:diff_y),
             OperatorRecipe(:solve_phi)]
     else
-        return []
+        return OperatorRecipe[]
     end
 end
 

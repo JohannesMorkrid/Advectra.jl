@@ -22,7 +22,7 @@ end
 
 function build_operator(::Val{:reciprocal}, domain::AbstractDomain; quadratic_term,
                         kwargs...)
-    SpectralFunction(u -> div(1, u), quadratic_term)
+    SpectralFunction(inv, quadratic_term)
 end
 
 function build_operator(::Val{:spectral_exp}, domain::AbstractDomain; quadratic_term,
@@ -48,7 +48,7 @@ function (op::SpectralFunction)(du::AbstractArray, u::AbstractArray, args...; kw
     mul!(U, bwd(transforms), padded ? pad!(up, u, typeof(transforms)) : u)
     @. V = op.f(dealiasing_coefficient * U, args...; kwargs...)
     mul!(padded ? up : du, fwd(transforms), V)
-    padded ? du .= unpad!(du, up, typeof(transforms)) ./ dealiasing_coefficient : up
+    padded ? du .= unpad!(du, up, typeof(transforms)) ./ dealiasing_coefficient : du
 end
 
 # Out-of-place

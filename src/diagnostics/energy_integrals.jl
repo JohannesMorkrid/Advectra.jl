@@ -196,7 +196,8 @@ function radial_flux(state_hat::AbstractArray, prob, time)
     dϕ_hat = -solve_phi(n_hat, Ω_hat)
     diff_y(dϕ_hat, dϕ_hat)
 
-    parseval_integral(n_hat, dϕ_hat, domain)
+    # n and v_x are real fields, so the imaginary part is only round-off
+    real(parseval_integral(n_hat, dϕ_hat, domain))
 end
 
 function requires_operator(::Val{:radial_flux}; kwargs...)
@@ -232,7 +233,8 @@ function poloidal_flux(state_hat::AbstractArray, prob, time)
     dϕ_hat = solve_phi(n_hat, Ω_hat)
     diff_x(dϕ_hat, dϕ_hat)
 
-    parseval_integral(n_hat, dϕ_hat, domain)
+    # n and v_y are real fields, so the imaginary part is only round-off
+    real(parseval_integral(n_hat, dϕ_hat, domain))
 end
 
 function requires_operator(::Val{:poloidal_flux}; kwargs...)

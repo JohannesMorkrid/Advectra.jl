@@ -46,9 +46,9 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,
                                 p=NullParameters(), dt=0.01,
                                 remove_modes::Function=remove_nothing!, kwargs...)
 
-        # If no linear operator given, assume there is non and match signature
-        isinplace(NonLinear) isa Val{true} ? L(du, u, operators, p, t) = (du .= zero(u)) :
-        L(u, operators, p, t) = zero(u)
+        # If no linear operator given, assume there is none and match the signature
+        L = isinplace(NonLinear) isa Val{true} ?
+            (du, u, operators, p, t) -> (du .= zero(u)) : (u, operators, p, t) -> zero(u)
 
         SpectralODEProblem(L, NonLinear, u0, domain, tspan; p=p, dt=dt,
                            remove_modes=remove_modes, kwargs...)
@@ -261,10 +261,11 @@ isinplace(prob::AbstractODEProblem{iip}) where {iip} = iip
 
 function isinplace(L::Function, N::Function)
     inplace = isinplace(L)
+    L_signature = inplace isa Val{true} ? "in-place" : "out-of-place"
+    N_signature = inplace isa Val{true} ? "out-of-place" : "in-place"
     inplace == isinplace(N) ? inplace : error("Mismatch in function signatures: Both \
-    `prob.L` and `prob.N` must have the same signature. `prob.L` is 
-    $(inplace ? "in-place" : "out-of-place"), while `prob.N` is 
-    $(!inplace ? "in-place" : "out-of-place").")
+    `prob.L` and `prob.N` must have the same signature. `prob.L` is $L_signature, while \
+    `prob.N` is $N_signature.")
 end
 
 # Inspired by https://github.com/SciML/SciMLBase.jl/blob/d1072adfcb061db6617972d4d5b2b6610ab32839/src/utils.jl#L6

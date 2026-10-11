@@ -18,13 +18,13 @@ abstract type LinearOperator{T} <: SpectralOperator end
 
 # TODO add Algebraic rules of Linear operators
 import Base: *, +, -, ^
-*(a::Number, op::LinearOperator) = typeof(op)(a .* op.coeffs)
+*(a::Number, op::LinearOperator) = rebuild(op, a .* op.coeffs)
 
 # Allows composite operators
 # TODO add some sort of promotion rules
-+(a::LinearOperator, b::LinearOperator) = typeof(op)(a.coeffs .+ b.coeffs)
--(a::LinearOperator, b::LinearOperator) = typeof(op)(a.coeffs .- b.coeffs)
-^(op::LinearOperator, power::Number) = typeof(op)(op.coeffs .^ power)
++(a::LinearOperator, b::LinearOperator) = rebuild(a, a.coeffs .+ b.coeffs)
+-(a::LinearOperator, b::LinearOperator) = rebuild(a, a.coeffs .- b.coeffs)
+^(op::LinearOperator, power::Number) = rebuild(op, op.coeffs .^ power)
 
 # --------------------------------- Elementwise Operator -----------------------------------
 
@@ -34,6 +34,9 @@ struct ElwiseOperator{T<:AbstractArray} <: LinearOperator{T}
 
     ElwiseOperator(coeffs; order=1) = new{typeof(coeffs)}(coeffs .^ order, order)
 end
+
+# New operator of the same kind with the given coefficients, used by the algebraic rules
+rebuild(::ElwiseOperator, coeffs) = ElwiseOperator(coeffs)
 
 # Out-of-place operator
 @views (op::ElwiseOperator)(u::AbstractArray) = op.coeffs .* u

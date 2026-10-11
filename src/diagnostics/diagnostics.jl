@@ -95,7 +95,7 @@ end
 """
 function parse_diagnostic_expr(expr)
     if expr isa Symbol
-        return :(DiagnosticRecipe($expr))
+        return :($DiagnosticRecipe($(diagnostic_method(expr))))
     elseif expr isa Expr && expr.head == :call
         method = expr.args[1]
 
@@ -110,12 +110,28 @@ function parse_diagnostic_expr(expr)
             end
         end
 
-        return :(DiagnosticRecipe($method; $(kwargs...)))
+        # Keyword values are evaluated in the caller's scope, e.g. stride=my_stride
+        kwargs = map(escape_kwarg, kwargs)
+        return :($DiagnosticRecipe($(diagnostic_method(method)); $(kwargs...)))
     elseif expr.head == :(=)
         error("Aliases, alias = method(kwargs...), is not supported for diagnostics.")
     else
         error("Invalid diagnostic syntax: $expr")
     end
+end
+
+# A method name is looked up in the caller's scope first, so user-defined diagnostics work, 
+# and otherwise in Advectra, so non-exported diagnostics like sample_density work
+function diagnostic_method(method::Symbol)
+    :($(esc(:(@isdefined($method)))) ? $(esc(method)) :
+      getfield($(@__MODULE__), $(QuoteNode(method))))
+end
+diagnostic_method(method) = esc(method) # e.g. Advectra.sample_density
+
+escape_kwarg(kwarg::Symbol) = Expr(:kw, kwarg, esc(kwarg)) # f(; stride)
+function escape_kwarg(kwarg::Expr)
+    kwarg.head in (:kw, :(=)) || error("Invalid diagnostic keyword argument: $kwarg")
+    Expr(:kw, first(kwarg.args), esc(last(kwarg.args)))
 end
 
 # ---------------------------- Include Implemented Diagnostics -----------------------------
