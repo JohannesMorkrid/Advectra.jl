@@ -131,7 +131,7 @@ using SMTPClient
 ## Contributing
 
 Issues and contributions through pull requests are welcome. Please consult the
-[contributor guide]() before submitting a pull request.
+[contributor guide](CONTRIBUTING.md) before submitting a pull request.
 
 ## Citation
 
