@@ -75,11 +75,11 @@ end
 # K(t) = ∫1/2(∇_⟂Φ)^2 = ∫dx1/2 U_E^2
 function kinetic_energy_integral(state_hat, prob, time)
     @unpack domain, operators = prob
-    @unpack solve_phi, diff_x, diff_y = operators
+    @unpack diff_x, diff_y = operators
     slices = eachslice(state_hat; dims=ndims(state_hat))
     n_hat = slices[1]
     Ω_hat = slices[2]
-    ϕ_hat = solve_phi(n_hat, Ω_hat)
+    ϕ_hat = get_phi!(prob, n_hat, Ω_hat)
     K = parseval_integral(diff_x(ϕ_hat), domain) .+ parseval_integral(diff_y(ϕ_hat), domain)
     return K / 2
 end
@@ -99,11 +99,11 @@ end
 
 function zonal_kinetic_energy_integral(state_hat, prob, time)
     @unpack domain, operators = prob
-    @unpack solve_phi, diff_x = operators
+    @unpack diff_x = operators
     slices = eachslice(state_hat; dims=ndims(state_hat))
     n_hat = slices[1]
     Ω_hat = slices[2]
-    ϕ_hat = solve_phi(n_hat, Ω_hat)
+    ϕ_hat = get_phi!(prob, n_hat, Ω_hat)
     ϕ_zonal = selectdim(ϕ_hat, 1, 1:1)
     parseval_integral(diff_x(ϕ_zonal), domain) / 2
 end
@@ -123,11 +123,11 @@ end
 
 function streamer_kinetic_energy_integral(state_hat, prob, time)
     @unpack domain, operators = prob
-    @unpack solve_phi, diff_y = operators
+    @unpack diff_y = operators
     slices = eachslice(state_hat; dims=ndims(state_hat))
     n_hat = slices[1]
     Ω_hat = slices[2]
-    ϕ_hat = solve_phi(n_hat, Ω_hat)
+    ϕ_hat = get_phi!(prob, n_hat, Ω_hat)
     ϕ_streamer = selectdim(ϕ_hat, 2, 1:1)
     parseval_integral(diff_y(ϕ_streamer), domain) / 2
 end
@@ -188,12 +188,12 @@ end
 """
 function radial_flux(state_hat::AbstractArray, prob, time)
     @unpack domain, operators = prob
-    @unpack solve_phi, diff_y = operators
+    @unpack diff_y = operators
 
     slices = eachslice(state_hat; dims=ndims(state_hat))
     n_hat = slices[1]
     Ω_hat = slices[2]
-    dϕ_hat = -solve_phi(n_hat, Ω_hat)
+    dϕ_hat = -get_phi!(prob, n_hat, Ω_hat)
     diff_y(dϕ_hat, dϕ_hat)
 
     parseval_integral(n_hat, dϕ_hat, domain)
@@ -224,12 +224,12 @@ end
 """
 function poloidal_flux(state_hat::AbstractArray, prob, time)
     @unpack domain, operators = prob
-    @unpack solve_phi, diff_x = operators
+    @unpack diff_x = operators
 
     slices = eachslice(state_hat; dims=ndims(state_hat))
     n_hat = slices[1]
     Ω_hat = slices[2]
-    dϕ_hat = solve_phi(n_hat, Ω_hat)
+    dϕ_hat = get_phi!(prob, n_hat, Ω_hat)
     diff_x(dϕ_hat, dϕ_hat)
 
     parseval_integral(n_hat, dϕ_hat, domain)
@@ -280,13 +280,12 @@ end
 
 # Γ_c(t) = C∫(n-ϕ)^2
 function resistive_dissipation_integral(state_hat, prob, time; adiabaticity_symbol=:C)
-    @unpack domain, operators, p = prob
-    @unpack solve_phi = operators
+    @unpack domain, p = prob
     C = getfield(p, adiabaticity_symbol)
     slices = eachslice(state_hat; dims=ndims(state_hat))
     n_hat = slices[1]
     Ω_hat = slices[2]
-    h_hat = n_hat .- solve_phi(n_hat, Ω_hat)
+    h_hat = n_hat .- get_phi!(prob, n_hat, Ω_hat)
     return C * parseval_integral(h_hat, domain)
 end
 
@@ -334,12 +333,12 @@ end
 # D^E_V(t) = μ∫ϕ∇⁶_⟂Ω = μ∫(∇²_⟂Ω)² 
 function kinetic_dissipation_integral(state_hat, prob, time; viscosity_symbol=:μ)
     @unpack domain, p, operators = prob
-    @unpack solve_phi, hyper_laplacian = operators
+    @unpack hyper_laplacian = operators
     μ = getfield(p, viscosity_symbol)
     slices = eachslice(state_hat; dims=ndims(state_hat))
     n_hat = slices[1]
     Ω_hat = slices[2]
-    ϕ_hat = solve_phi(n_hat, Ω_hat)
+    ϕ_hat = get_phi!(prob, n_hat, Ω_hat)
     μ * parseval_integral(ϕ_hat, hyper_laplacian(Ω_hat), domain)
 end
 

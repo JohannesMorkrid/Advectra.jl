@@ -37,12 +37,11 @@ end
 # --------------------------------------- Potential ----------------------------------------
 
 function sample_potential(state_hat, prob, time; kwargs...)
-    @unpack operators, domain = prob
-    @unpack solve_phi = operators
+    @unpack domain = prob
     slices = eachslice(state_hat; dims=ndims(state_hat))
     n_hat = slices[1]
     Ω_hat = slices[2]
-    ϕ = bwd(domain) * solve_phi(n_hat, Ω_hat)
+    ϕ = bwd(domain) * get_phi!(prob, n_hat, Ω_hat)
     return ϕ
 end
 

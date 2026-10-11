@@ -278,12 +278,11 @@ end
   Probe the potential field, ϕ, at the given `positions`. 
 """
 function probe_potential(state_hat, prob, time, positions; interpolation=nothing)
-    @unpack domain, operators = prob
-    @unpack solve_phi = operators
+    @unpack domain = prob
     slices = eachslice(state_hat; dims=ndims(state_hat))
     n_hat = slices[1]
     Ω_hat = slices[2]
-    ϕ = bwd_plan(domain) * solve_phi(n_hat, Ω_hat)
+    ϕ = bwd_plan(domain) * get_phi!(prob, n_hat, Ω_hat)
     probe_field(ϕ, domain, positions, interpolation)
 end
 
@@ -309,11 +308,11 @@ end
 """
 function probe_radial_velocity(state, prob, time, positions; interpolation=nothing)
     @unpack domain, operators = prob
-    @unpack solve_phi, diff_y = operators
+    @unpack diff_y = operators
     slices = eachslice(state_hat; dims=ndims(state_hat))
     n_hat = slices[1]
     Ω_hat = slices[2]
-    ϕ_hat = solve_phi(n_hat, Ω_hat)
+    ϕ_hat = get_phi!(prob, n_hat, Ω_hat)
     v_x_hat = -diff_y(ϕ_hat)
     v_x = bwd_plan(domain) * v_x_hat
     probe_field(v_x, domain, positions, interpolation)
@@ -344,13 +343,13 @@ end
 """
 function probe_all(state_hat, prob, time, positions; interpolation=nothing)
     @unpack domain, operators = prob
-    @unpack solve_phi, diff_y = operators
+    @unpack diff_y = operators
 
     # Calculate spectral fields
     slices = eachslice(state_hat; dims=ndims(state_hat))
     n_hat = slices[1]
     Ω_hat = slices[2]
-    ϕ_hat = solve_phi(n_hat, Ω_hat)
+    ϕ_hat = get_phi!(prob, n_hat, Ω_hat)
     v_x_hat = -diff_y(ϕ_hat)
 
     # Cache for transformation

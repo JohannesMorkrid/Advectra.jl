@@ -503,3 +503,35 @@ end
 
 # Out-of-place (non-boussinesq, relaxation)
 (op::SolvePhiRelaxation)(u::AbstractArray, ϖ::AbstractArray) = op(similar(u), u, ϖ)
+
+# ------------------------------------- Diagnostics Cache -----------------------------------
+
+# Many diagnostics need ϕ for the same (n_hat, Ω_hat) at a given output step; solve_phi can be
+# an expensive iterative solve (SolvePhiNonBoussinesq/SolvePhiRelaxation), so cache it once per
+# step and hand each diagnostic its own copy (some diagnostics update their ϕ_hat in-place).
+mutable struct PhiCache{T<:AbstractArray}
+    buffer::T
+    valid::Bool
+end
+
+"""
+    get_phi!(prob, n_hat, Ω_hat)
+
+  Return `solve_phi(n_hat, Ω_hat)`, computing it only once per output step. Invalidated in
+  [`handle_output!`](@ref) so subsequent steps recompute it. Falls back to a plain,
+  uncached `solve_phi` call when `prob` (e.g. a hand-built NamedTuple in tests/scripts) has
+  no `phi_cache` field.
+"""
+function get_phi!(prob, n_hat::AbstractArray, Ω_hat::AbstractArray)
+    @unpack solve_phi = prob.operators
+    if !hasproperty(prob, :phi_cache)
+        return solve_phi(n_hat, Ω_hat)
+    end
+
+    cache = prob.phi_cache
+    if !cache.valid
+        solve_phi(cache.buffer, n_hat, Ω_hat)
+        cache.valid = true
+    end
+    return copy(cache.buffer)
+end
