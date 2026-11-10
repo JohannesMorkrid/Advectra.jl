@@ -13,7 +13,7 @@
 
   ## Required — every concrete subtype must implement:
 
-  - `initialize!(writer, prob, diagnostics, initial_samples, strides, t0; kwargs...)`:
+  - `initialize!(writer, prob, diagnostics, initial_samples, t0; kwargs...)`:
       Called once before the time loop by `Output`. Should build the file structure and
       write the initial sample for each diagnostic. Currently recognised kwargs passed
       by `Output`: `simulation_name`, `resume`. Writers extract only what they need and
