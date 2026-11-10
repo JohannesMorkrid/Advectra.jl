@@ -50,7 +50,7 @@
   ## Trait predicates:
 
   - `isinitialized(writer)`:
-      Returns `true` once `initialize!` has been called. Used to guard `write!` calls.
+      Returns `true` once `initialize!` has been called. Used to guard `write_to!` calls.
 
   - `supports_checkpoint(writer)`:
       Returns `true` for writers that implement `store_checkpoint!` and
