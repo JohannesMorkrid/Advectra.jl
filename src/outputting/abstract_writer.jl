@@ -19,7 +19,7 @@
       by `Output`: `simulation_name`, `resume`. Writers extract only what they need and
       absorb the rest via `kwargs...`.
 
-  - `write!(writer, diagnostic, idx, sample, time)`:
+  - `write_to!(writer, diagnostic, idx, sample, time)`:
       Called every time a diagnostic is sampled. Should persist `sample` at index `idx`.
       Implementations may check `isinitialized(writer)` and throw if called before
       `initialize!`.
