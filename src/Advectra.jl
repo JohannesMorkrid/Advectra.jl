@@ -48,7 +48,7 @@ export SpectralODEProblem
 include("schemes.jl")
 export MSS1, MSS2, MSS3
 
-include("outputer.jl")
+include("outputting/outputer.jl")
 export Output
 
 include("spectralSolve.jl")
