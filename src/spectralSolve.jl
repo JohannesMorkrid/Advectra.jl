@@ -1,15 +1,33 @@
-# Assuming for now that dt is fixed
-# If custom outputter is not provided, then resort to default
-# First step is stored during initilization of output
-function spectral_solve(prob::SOP, scheme::SA=MSS3(),
-                        output::O=Output(prob; store_hdf=false);
-                        debug::Bool=false,) where {SOP<:SpectralODEProblem,
-                                                   SA<:AbstractODEAlgorithm,O<:Output}
+# ------------------------------------------------------------------------------------------
+#                                      Spectral Solve                                       
+# ------------------------------------------------------------------------------------------
 
-    # Initialize cache and tracking
-    cache, t, step = initialize_solve(prob, scheme, output)
+# Assuming for now that dt is fixed.
+# The first step is stored during initialization of Output.
+"""
+    spectral_solve(prob, scheme, output; debug)
 
-    # Time step
+  Integrates `prob` using `scheme`, writing output via `output` at each step.
+
+  ## Arguments
+  - `prob`: The `SpectralODEProblem` to solve.
+  - `scheme`: The ODE algorithm to use (default: `MSS3()`).
+  - `output`: An `Output` instance managing writers and diagnostics
+    (default: `Output(prob)` with a single `HDF5Writer`).
+
+  ## Keyword Arguments
+  - `resume`: If `true`, restores the integrator state from the most recent checkpoint
+    stored in the first capable writer (default: `false`).
+  - `debug`: If `true`, rethrows errors instead of printing them (default: `false`).
+"""
+function spectral_solve(prob::SpectralODEProblem, scheme::AbstractODEAlgorithm=MSS3(),
+    output::Output=Output(prob);
+    resume::Bool=false,
+    debug::Bool=false)
+
+    # Initialize cache and tracking — restores checkpoint if resume=true and one exists
+    cache, step, t = initialize_solve(prob, scheme, output; resume)
+
     dt = prob.dt
 
     # Calculate number of steps #TODO ceil or floor?
@@ -23,7 +41,6 @@ function spectral_solve(prob::SOP, scheme::SA=MSS3(),
         while step < total_steps
             perform_step!(cache, prob, t)
 
-            # Increment step and time
             step += 1
             t = first(prob.tspan) + step * dt
 
@@ -34,29 +51,24 @@ function spectral_solve(prob::SOP, scheme::SA=MSS3(),
         debug ? rethrow(error) : showerror(stdout, error)
     end
 
-    # Store the cache to be able to resume simulations
-    save_checkpoint!(output, cache, step, t)
+    # Store checkpoint so the simulation can be resumed later
+    store_checkpoint!(output, cache, step, t)
 
-    # TODO catch edge case
+    # Final flush
+    flush!(output, step)
 
-    # Write buffer to file
-    output.store_hdf ? flush(output.simulation.file) : nothing
-
-    # Returns output struct
     return output
 end
 
-function initialize_solve(prob::SOP, scheme::SA,
-                          output::O) where {SOP<:SpectralODEProblem,
-                                            SA<:AbstractODEAlgorithm,O<:Output}
-    if output.resume && output.store_hdf && haskey(output.simulation, "checkpoint")
-        cache = restore_checkpoint(output.simulation, prob, scheme)
-        t = read(output.simulation, "checkpoint/time")
-        step = read(output.simulation, "checkpoint/step")
-    else
-        cache = get_cache(prob, scheme)
-        t = first(prob.tspan)
-        step = 0
-    end
-    return cache, t, step
+"""
+    initialize_solve(prob, scheme, output)
+
+  Initializes the integrator cache and time tracking. If any writer supports checkpointing
+  and holds a stored checkpoint, the cache and time are restored from it.
+"""
+function initialize_solve(prob::SpectralODEProblem, scheme::AbstractODEAlgorithm,
+    output::Output; resume::Bool=false)
+
+    restored = resume ? restore_checkpoint(output, prob, scheme) : nothing
+    isnothing(restored) ? (get_cache(prob, scheme), 0, first(prob.tspan)) : restored
 end

@@ -1,17 +1,13 @@
 # ------------------------------------------------------------------------------------------
-#                                         Output Struct
+#                                          Output                                           
 # ------------------------------------------------------------------------------------------
 
-# TODO fix function description
 """
     Output
 
-  Coordinates simulation output: manages diagnostics, drives the writer(s), and buffers the
-  physical-space state for diagnostics that need it.
-
-  Writers are passed explicitly, so any combination of `HDF5Writer`, `LocalWriter`, or
-  future writers (NetCDF, Zarr, …) can be used together or alone. The simulation loop
-  calls only `handle_output!` and never touches the writers directly.
+  Coordinates simulation output: owns the diagnostics, manages the physical-space transform
+  buffer, drives all writers, and handles checkpointing. The simulation loop calls only
+  `handle_output!` and `save_checkpoint!` — it never touches writers directly.
 
   # Fields
   - `diagnostics`: Array of `Diagnostic`s to evaluate each step.
@@ -23,50 +19,101 @@
 
   # Constructor
 
-    Output(prob; writers, physical_transform, storage_limit)
+    Output(prob; writers, physical_transform, storage_limit, simulation_name, resume)
 
   ## Keyword Arguments
-  - `writers`: One or more `AbstractWriter` instances (default: `[HDF5Writer(prob)]`).
+  - `writers`: One or more `AbstractWriter` instances (default: `[HDF5Writer()]`).
   - `physical_transform`: Applied after the inverse spectral transform (default: `identity`).
   - `storage_limit`: Optional total storage cap as a string, e.g. `"2 GB"` (default: `""`).
-  
-  - `simulation_name`: Name of the top-level HDF5 group (default: `:filename`).
-    Supported symbols: `:filename`, `:timestamp`, `:parameters`, or a plain `String`.
-  - `resume`: If `true`, open an existing file and validate its attributes (default: `false`).
+  - `simulation_name`: Name for the top-level group in each writer (default: `"advectra"`).
+    Supported symbols: `:timestamp`, `:parameters`, `nothing` (flat, no group), or a
+    plain `String`.
+  - `resume`: Resume from an existing output file (default: `false`).
+
+  # Usage example
+
+    # Single writer (default)
+    output = Output(prob)
+
+    # Custom writers
+    output = Output(prob;
+        writers = [
+            HDF5Writer(filename="run_full.h5"),
+            HDF5Writer(filename="run_scalars.h5"),
+            LocalWriter(),
+        ],
+        physical_transform = my_transform,
+        simulation_name    = :timestamp,
+        storage_limit      = "10 GB"
+    )
 """
 mutable struct Output{DV<:AbstractArray{<:Diagnostic},UB<:AbstractArray,
     WV<:AbstractVector{<:AbstractWriter},PT<:Function}
     diagnostics::DV
-    strides::Vector{Int}
+    strides::Vector{Int} # TODO remove this in favor of the schedules stored in diagnostics
     state_buffer::UB
-    simulation_name::String
     writers::WV
     physical_transform::PT
     transformed::Bool
-    resume::Bool
 end
 
-# TODO add #resume::Bool=false, and #simulation_name::Union{AbstractString,Symbol}=:filename,
+function Output(prob::SpectralODEProblem;
+    writers::AbstractVector{<:AbstractWriter}=[HDF5Writer()],
+    physical_transform::PT=identity,
+    storage_limit::AbstractString="",
+    simulation_name::Union{AbstractString,Symbol,Nothing}="advectra",
+    resume::Bool=false) where {PT<:Function}
 
-function Output(prob::SpectralODEProblem; simulation_name::AbstractString="",
-    writers::AbstractVector{<:AbstractWriter}=[HDF5Writer(prob)],
-    physical_transform::PT=identity, resume::Bool=false,
-    storage_limit::AbstractString="") where {PT<:Function}
-
-    # Prepare physical-space state buffer and sample each diagnostic once at t0
+    # Prepare physical-space buffer and sample each diagnostic once at t0
     state, t0 = prepare_initial_state(prob; physical_transform=physical_transform)
     diagnostics, initial_samples = initialize_diagnostics(prob, state, prob.u0_hat, t0)
     strides = determine_strides(initial_samples, prob, storage_limit)
 
-    # Give every writer a chance to allocate its storage
+    # Resolve simulation name once — all writers share the same resolved string
+    simulation_name = resolve_simulation_name(simulation_name, prob)
+
+    # Give every writer a chance to build its file structure
     for writer in writers
-        initialize!(writer, prob, diagnostics, initial_samples, t0; resume, simulation_name)
+        initialize!(writer, prob, diagnostics, initial_samples, t0; simulation_name, resume)
     end
 
-    return Output(diagnostics, strides, state, simulation_name, writers, physical_transform, true, resume)
+    return Output(diagnostics, strides, state, writers, physical_transform, true)
 end
 
-# --------------------------------- Prepare Initial State ----------------------------------
+# ------------------------------- Convenience Constructors ---------------------------------
+
+"""
+    Output(prob, writer; kwargs...)
+
+  Convenience form accepting a single writer without wrapping it in a vector.
+"""
+Output(prob::SpectralODEProblem, writer::AbstractWriter; kwargs...) =
+    Output(prob; writers=[writer], kwargs...)
+
+# --------------------------------- Simulation Name Resolution ----------------------------
+
+"""
+    resolve_simulation_name(simulation_name, prob) -> String
+
+  Resolves `simulation_name` into a concrete HDF5 group name string. Called once by
+  `Output` before passing the result to each writer's `initialize!`.
+
+  ### Supported values
+  * `nothing`      — `"/"` (flat structure, write directly to file root)
+  * `:timestamp`   — `Dates.now()` formatted as a string (unique per run)
+  * `:parameters`  — parameter names and values joined into a string
+  * A plain `String` — used as-is
+"""
+function resolve_simulation_name(simulation_name, prob)
+    simulation_name === nothing && return "/"
+    simulation_name == :timestamp && return "$(now())"
+    simulation_name == :parameters && return parameter_string(prob.p)
+    simulation_name isa String && return simulation_name
+    error("$simulation_name is not a valid simulation_name. " *
+        "Use nothing, :timestamp, :parameters, or a plain String.")
+end
+
+# --------------------------------- Prepare Initial State ---------------------------------
 
 """
     prepare_initial_state(prob; physical_transform=identity)
@@ -80,62 +127,39 @@ function prepare_initial_state(prob; physical_transform=identity)
     return state, t0
 end
 
-# ----------------------------------- Runtime Handling -------------------------------------
+# --------------------------------- Checkpoint Interface -----------------------------------
 
 """
-    handle_output!(output, step, state, prob, time)
+    store_checkpoint!(output, cache, step, time)
 
-  Called by the integrator after every time step. Removes aliased modes, samples all due
-  diagnostics (transforming the state at most once per step), flushes writers, and checks
-  for NaN breakdown.
+  Fans out to all writers that support checkpointing. All supporting writers receive the
+  checkpoint — redundancy is cheap since checkpointing is rare and data is small.
 """
-function handle_output!(output::Output, step::Integer, state::AbstractArray,
-    prob::SpectralODEProblem, time::Number)
-
-    output.transformed = false
-
-    # Remove modes after each step using user defined function
-    prob.remove_modes(state, prob.domain)
-
-    handle_diagnostics!(output, step, state, prob, time)
-
+function store_checkpoint!(output::Output, cache::AbstractCache, step::Integer, time::Number)
     for writer in output.writers
-        flush!(writer, step)
+        store_checkpoint!(writer, cache, step, time)
     end
-
-    # Check if first value is NaN, if one value is NaN the whole Array will turn NaN after FFT
-    assert_no_nan(state, time)
 end
 
-# --------------------------------- Convenience Constructors ------------------------------
-
 """
-    Output(prob, writer::AbstractWriter; kwargs...)
+    restore_checkpoint(output, prob, scheme) -> Union{Tuple, Nothing}
 
-  Convenience form accepting a single writer without wrapping it in a vector.
+  Finds the first writer with a stored checkpoint and restores `cache, step, t` from it.
+  Returns `nothing` if no checkpoint is found, leaving the caller to handle the fresh-start
+  fallback.
 """
-Output(prob::SpectralODEProblem, writer::AbstractWriter; kwargs...) =
-    Output(prob; writers=[writer], kwargs...)
-
-"""
-    resolve_simulation_name(simulation_name, prob, filename)
-
-  Converts the `simulation_name` keyword into a group name string.
-
-  ### Supported symbols
-  * `:filename`   — basename of the file without extension.
-  * `:timestamp`  — `Dates.now()` formatted as a string.
-  * `:parameters` — parameter names and values joined into a string.
-"""
-function resolve_simulation_name(simulation_name, prob, filename)
-    simulation_name == :filename && return first(splitext(basename(filename)))
-    simulation_name == :timestamp && return "$(now())"
-    simulation_name == :parameters && return parameter_string(prob.p)
-    simulation_name isa String && return simulation_name
-    error("$simulation_name is not a valid input")
+function restore_checkpoint(output::Output, prob::SpectralODEProblem,
+    scheme::AbstractODEAlgorithm)
+    checkpoint_writer = findfirst(has_checkpoint, output.writers)
+    isnothing(checkpoint_writer) && return nothing
+    cache, step, t = restore_checkpoint(output.writers[checkpoint_writer], prob, scheme)
+    @info "Resuming from checkpoint at t=$t (step=$step)"
+    return cache, step, t
 end
 
-# ------------------------------------ Base overloads -------------------------------------
+# ------------------------------------ Base overloads --------------------------------------
+
+flush!(output::Output, step) = foreach(w -> flush!(w, step), output.writers)
 
 function Base.close(output::Output)
     for writer in output.writers
@@ -145,9 +169,8 @@ end
 
 function Base.show(io::IO, m::MIME"text/plain", output::Output)
     print(io, "Output")
-    if output.physical_transform !== identity
+    output.physical_transform !== identity &&
         print(io, " (physical_transform: ", nameof(output.physical_transform), ")")
-    end
     print(io, "\nWriters:")
     for writer in output.writers
         print(io, "\n  ")
