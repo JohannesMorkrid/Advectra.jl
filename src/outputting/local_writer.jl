@@ -17,14 +17,17 @@
 struct LocalWriter <: AbstractWriter
     data::Dict{String,Vector}
     t::Dict{String,Vector{Float64}}
+    simulation_name::Ref{String}   # set by initialize!, for display purposes only
 end
 
-# By default empty dictionaries before `initialized!`
-LocalWriter() = LocalWriter(Dict{String,Vector}(), Dict{String,Vector{Float64}}())
+# By default empty dictionaries before `initialized!
+LocalWriter() = LocalWriter(Dict{String,Vector}(), Dict{String,Vector{Float64}}(), Ref("advectra"))
 
 # --------------------------------------- Interface ----------------------------------------
 
-function initialize!(writer::LocalWriter, prob, diagnostics, initial_samples, t0; kwargs...)
+function initialize!(writer::LocalWriter, prob, diagnostics, initial_samples, strides, t0;
+    simulation_name::String="advectra", kwargs...)
+    writer.simulation_name[] = simulation_name
     N_steps = compute_number_of_steps(prob)
     for (diagnostic, sample) in zip(diagnostics, initial_samples)
         N_samples = N_steps #cld(N_steps, stride) + 1 # TODO integrate schedules here
@@ -39,7 +42,7 @@ end
 
 function write_to!(writer::LocalWriter, diagnostic, idx::Integer, sample, time)
     isinitialized(writer) ||
-        error("LocalWriter has not been initialized — call initialize! before write!")
+        error("LocalWriter has not been initialized — call initialize! before write_to!")
     writer.data[diagnostic.name][idx] = isa(sample, AbstractArray) ? copy(sample) : sample
     writer.t[diagnostic.name][idx] = time
 end
@@ -53,5 +56,6 @@ supports_checkpoint(::LocalWriter) = false
 
 function Base.show(io::IO, ::MIME"text/plain", writer::LocalWriter)
     keys_str = isempty(writer.data) ? "(empty)" : join(keys(writer.data), ", ")
-    print(io, "LocalWriter (diagnostics: ", keys_str, ")")
+    print(io, "LocalWriter (simulation: ", writer.simulation_name[],
+        ", diagnostics: ", keys_str, ")")
 end
