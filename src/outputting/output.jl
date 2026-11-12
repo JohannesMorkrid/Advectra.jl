@@ -11,7 +11,6 @@
 
   # Fields
   - `diagnostics`: Array of `Diagnostic`s to evaluate each step.
-  - `strides`: Per-diagnostic stride (steps between samples).
   - `state_buffer`: Pre-allocated buffer for the physical-space state.
   - `writers`: Vector of `AbstractWriter`s that receive each sample.
   - `physical_transform`: Function applied to the state after the inverse transform.
@@ -54,7 +53,6 @@
 mutable struct Output{DV<:AbstractArray{<:Diagnostic},UB<:AbstractArray,
     WV<:AbstractVector{<:AbstractWriter},PT<:Function}
     diagnostics::DV # TODO perhaps diagnostics will be removed all together from Output? Or removed from SpectralODEProblem?
-    strides::Vector{Int} # TODO remove this in favor of the schedules stored in diagnostics
     state_buffer::UB
     writers::WV
     physical_transform::PT
@@ -73,7 +71,6 @@ function Output(prob::SpectralODEProblem;
     state, t0 = prepare_initial_state(prob; physical_transform=physical_transform)
     # TODO this method probably does not work anymore
     diagnostics, initial_samples = initialize_diagnostics(prob, state, prob.u0_hat, t0)
-    strides = determine_strides(initial_samples, prob, storage_limit)
 
     # Resolve simulation name once — all writers share the same resolved string
     simulation_name = resolve_simulation_name(simulation_name, prob)
@@ -83,7 +80,7 @@ function Output(prob::SpectralODEProblem;
         initialize!(writer, prob, diagnostics, initial_samples, t0; simulation_name, resume)
     end
 
-    return Output(diagnostics, strides, state, writers, physical_transform, true, resume)
+    return Output(diagnostics, state, writers, physical_transform, true, resume)
 end
 
 # ------------------------------- Convenience Constructors ---------------------------------
