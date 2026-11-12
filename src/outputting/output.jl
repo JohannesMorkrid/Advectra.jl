@@ -28,20 +28,24 @@
   - `simulation_name`: Name for the top-level group in each writer (default: `"advectra"`).
     Supported symbols: `:timestamp`, `:parameters`, `nothing` (flat, no group), or a
     plain `String`.
-  - `resume`: Resume from an existing output file (default: `false`).
+  - `resume`: If `true`, appends to existing output files and restores the checkpoint.
+    If `false` and a file exists, an error is raised — pass `overwrite_existing=true`
+    on the writer to explicitly overwrite (default: `false`).
 
-  # Usage example
+  # Usage examples
 
-    # Single writer (default)
-    output = Output(prob)
+    # First run — file does not exist yet
+    output = Output(prob; writers=[HDF5Writer(filename="run.h5")])
 
-    # Custom writers
+    # Resume after walltime — appends to existing file and restores checkpoint
+    output = Output(prob; writers=[HDF5Writer(filename="run.h5")], resume=true)
+
+    # Start fresh explicitly — overwrites existing file (always warns)
+    output = Output(prob; writers=[HDF5Writer(filename="run.h5", overwrite_existing=true)])
+
+    # Multiple writers with custom diagnostics
     output = Output(prob;
-        writers = [
-            HDF5Writer(filename="run_full.h5"),
-            HDF5Writer(filename="run_scalars.h5"),
-            LocalWriter(),
-        ],
+        writers            = [HDF5Writer(filename="run.h5"), LocalWriter()],
         physical_transform = my_transform,
         simulation_name    = :timestamp,
         storage_limit      = "10 GB"
@@ -49,12 +53,13 @@
 """
 mutable struct Output{DV<:AbstractArray{<:Diagnostic},UB<:AbstractArray,
     WV<:AbstractVector{<:AbstractWriter},PT<:Function}
-    diagnostics::DV
+    diagnostics::DV # TODO perhaps diagnostics will be removed all together from Output? Or removed from SpectralODEProblem?
     strides::Vector{Int} # TODO remove this in favor of the schedules stored in diagnostics
     state_buffer::UB
     writers::WV
     physical_transform::PT
     transformed::Bool
+    resume::Bool
 end
 
 function Output(prob::SpectralODEProblem;
@@ -66,6 +71,7 @@ function Output(prob::SpectralODEProblem;
 
     # Prepare physical-space buffer and sample each diagnostic once at t0
     state, t0 = prepare_initial_state(prob; physical_transform=physical_transform)
+    # TODO this method probably does not work anymore
     diagnostics, initial_samples = initialize_diagnostics(prob, state, prob.u0_hat, t0)
     strides = determine_strides(initial_samples, prob, storage_limit)
 
@@ -77,7 +83,7 @@ function Output(prob::SpectralODEProblem;
         initialize!(writer, prob, diagnostics, initial_samples, t0; simulation_name, resume)
     end
 
-    return Output(diagnostics, strides, state, writers, physical_transform, true)
+    return Output(diagnostics, strides, state, writers, physical_transform, true, resume)
 end
 
 # ------------------------------- Convenience Constructors ---------------------------------
@@ -93,7 +99,7 @@ Output(prob::SpectralODEProblem, writer::AbstractWriter; kwargs...) =
 # --------------------------------- Simulation Name Resolution ----------------------------
 
 """
-    resolve_simulation_name(simulation_name, prob) -> String
+    resolve_simulation_name(simulation_name, prob)
 
   Resolves `simulation_name` into a concrete HDF5 group name string. Called once by
   `Output` before passing the result to each writer's `initialize!`.
@@ -104,7 +110,7 @@ Output(prob::SpectralODEProblem, writer::AbstractWriter; kwargs...) =
   * `:parameters`  — parameter names and values joined into a string
   * A plain `String` — used as-is
 """
-function resolve_simulation_name(simulation_name, prob)
+function resolve_simulation_name(simulation_name, prob)::String
     simulation_name === nothing && return "/"
     simulation_name == :timestamp && return "$(now())"
     simulation_name == :parameters && return parameter_string(prob.p)
@@ -142,7 +148,7 @@ function store_checkpoint!(output::Output, cache::AbstractCache, step::Integer, 
 end
 
 """
-    restore_checkpoint(output, prob, scheme) -> Union{Tuple, Nothing}
+    restore_checkpoint(output, prob, scheme)
 
   Finds the first writer with a stored checkpoint and restores `cache, step, t` from it.
   Returns `nothing` if no checkpoint is found, leaving the caller to handle the fresh-start
@@ -150,8 +156,10 @@ end
 """
 function restore_checkpoint(output::Output, prob::SpectralODEProblem,
     scheme::AbstractODEAlgorithm)
+    output.resume || return nothing
     checkpoint_writer = findfirst(has_checkpoint, output.writers)
     isnothing(checkpoint_writer) && return nothing
+    # TODO perhaps the returned fields will change
     cache, step, t = restore_checkpoint(output.writers[checkpoint_writer], prob, scheme)
     @info "Resuming from checkpoint at t=$t (step=$step)"
     return cache, step, t

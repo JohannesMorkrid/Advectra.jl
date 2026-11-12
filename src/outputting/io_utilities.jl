@@ -70,6 +70,21 @@ function parameter_string(parameters::P) where {P<:NamedTuple}
     join([string(k, "=", v) for (k, v) in sort(collect(pairs(parameters)))], ", ")
 end
 
+
+# --------------------------------- File Path Resolution -----------------------------------
+
+"""
+    determine_filepath(filename)
+
+  Resolves the full path for `filename`. When no directory is given, places the file in
+  an `output/` subdirectory relative to the source file (interactive) or `pwd()` (script).
+"""
+function determine_filepath(filename)
+    isempty(dirname(filename)) || return filename
+    isinteractive() ? joinpath(Base.source_dir(), "output", filename) :
+    joinpath(pwd(), "output", filename)
+end
+
 # ------------------------------------- NaN Detection --------------------------------------
 
 """

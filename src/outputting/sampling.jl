@@ -48,6 +48,31 @@ function handle_diagnostics!(output, step::Integer, state, prob, time)
 end
 
 """
+    handle_output!(output, step, state, prob, time)
+
+  Called by the integrator after every time step. Removes aliased modes, samples all due
+  diagnostics (transforming the state at most once per step), flushes writers, and checks
+  for NaN breakdown.
+"""
+function handle_output!(output::Output, step::Integer, state::AbstractArray,
+    prob::SpectralODEProblem, time::Number)
+
+    output.transformed = false
+
+    # Remove modes after each step using user defined function
+    prob.remove_modes(state, prob.domain)
+
+    handle_diagnostics!(output, step, state, prob, time)
+
+    for writer in output.writers
+        flush!(writer, step)
+    end
+
+    # Check if first value is NaN, if one value is NaN the whole Array will turn NaN after FFT
+    assert_no_nan(state, time)
+end
+
+"""
     sample_diagnostic!(output, diagnostic, idx, state, prob, time)
 
   Evaluates `diagnostic` and dispatches the result to every writer. Transforms the state to
@@ -67,7 +92,7 @@ function sample_diagnostic!(output::Output, diagnostic, idx::Integer, state, pro
     isnothing(sample) && return
 
     for writer in output.writers
-        write!(writer, diagnostic, idx, sample, time)
+        write_to!(writer, diagnostic, idx, sample, time)
     end
 end
 
