@@ -49,7 +49,7 @@ include("schemes.jl")
 export MSS1, MSS2, MSS3
 
 include("outputting/outputer.jl")
-export Output
+export Output, HDF5Writer
 
 include("spectralSolve.jl")
 export spectral_solve

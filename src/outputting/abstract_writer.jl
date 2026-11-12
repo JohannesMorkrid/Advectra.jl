@@ -19,10 +19,11 @@
       by `Output`: `simulation_name`, `resume`. Writers extract only what they need and
       absorb the rest via `kwargs...`.
 
-  - `write_to!(writer, diagnostic, idx, sample, time)`:
-      Called every time a diagnostic is sampled. Should persist `sample` at index `idx`.
-      Implementations may check `isinitialized(writer)` and throw if called before
-      `initialize!`.
+  - `write_to!(writer, diagnostic, sample, step, time)`:
+      Called every time a diagnostic is sampled. Should append `sample` to the writer's
+      storage. `step` serves as a commit marker for crash safety. Writers determine their
+      own write position — no `idx` is passed. Implementations may check
+      `isinitialized(writer)` and throw if called before `initialize!`.
 
   ## Optional — default no-ops provided:
 

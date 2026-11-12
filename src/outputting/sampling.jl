@@ -31,28 +31,11 @@ end
 # ----------------------------------- Runtime Handling -------------------------------------
 
 """
-    handle_diagnostics!(output, step::Integer, state, prob, time)
-
-  Iterates through the list of diagnostics (`output.diagnostics`) and determines whether or
-  not to sample the diagnostic. If it is sampled the output is stored and the schedule is advanced.
-"""
-function handle_diagnostics!(output, step::Integer, state, prob, time)
-
-    for diagnostic in output.diagnostics
-        if should_sample(diagnostic, step, time)
-            #idx = step ÷ stride + 1
-            sample_diagnostic!(output, diagnostic, state, prob, time) # TODO possibly compute idx internally in Diagnostic
-            advance_schedule!(diagnostic)
-        end
-    end
-end
-
-"""
     handle_output!(output, step, state, prob, time)
 
   Called by the integrator after every time step. Removes aliased modes, samples all due
-  diagnostics (transforming the state at most once per step), flushes writers, and checks
-  for NaN breakdown.
+  diagnostics (transforming the state at most once per step regardless of how many writers
+  are active), flushes all writers, and checks for NaN breakdown.
 """
 function handle_output!(output::Output, step::Integer, state::AbstractArray,
     prob::SpectralODEProblem, time::Number)
@@ -64,21 +47,34 @@ function handle_output!(output::Output, step::Integer, state::AbstractArray,
 
     handle_diagnostics!(output, step, state, prob, time)
 
-    for writer in output.writers
-        flush!(writer, step)
-    end
+    flush!(output, step)
 
     # Check if first value is NaN, if one value is NaN the whole Array will turn NaN after FFT
     assert_no_nan(state, time)
 end
 
 """
-    sample_diagnostic!(output, diagnostic, idx, state, prob, time)
+    handle_diagnostics!(output, step, state, prob, time)
+
+  Iterates over all diagnostics and samples those that are due at this `step`.
+"""
+function handle_diagnostics!(output::Output, step::Integer, state, prob, time)
+    for diagnostic in output.diagnostics
+        if should_sample(diagnostic, step, time)
+            sample_diagnostic!(output, diagnostic, step, state, prob, time)
+            advance_schedule!(diagnostic)
+        end
+    end
+end
+
+"""
+    sample_diagnostic!(output, diagnostic, step, state, prob, time)
 
   Evaluates `diagnostic` and dispatches the result to every writer. Transforms the state to
   physical space first if the diagnostic requires it and this hasn't been done yet this step.
+  Each writer determines its own write position, no `idx` is passed.
 """
-function sample_diagnostic!(output::Output, diagnostic, idx::Integer, state, prob, time)
+function sample_diagnostic!(output::Output, diagnostic, step::Integer, state, prob, time)
     # Check if diagnostic assumes physical field and transform if not yet done
     if !diagnostic.assumes_spectral_state && !output.transformed
         # Transform state (updates state_buffer)
@@ -92,7 +88,7 @@ function sample_diagnostic!(output::Output, diagnostic, idx::Integer, state, pro
     isnothing(sample) && return
 
     for writer in output.writers
-        write_to!(writer, diagnostic, idx, sample, time)
+        write_to!(writer, diagnostic, sample, step, time)
     end
 end
 

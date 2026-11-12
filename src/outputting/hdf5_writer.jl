@@ -43,32 +43,31 @@ end
 
 # --------------------------------------- Interface ----------------------------------------
 
-function initialize!(writer::HDF5Writer, prob, diagnostics, initial_samples, strides, t0;
+function initialize!(writer::HDF5Writer, prob, diagnostics, initial_samples, t0;
     simulation_name::String="advectra", resume::Bool=false, kwargs...)
     simulation = open_or_create_simulation_group(writer, simulation_name, prob; resume)
 
     # Transfer HDF5 hid_t and file properties to the placeholder
     setsimulation!(writer, simulation)
 
-    # TODO to be updated when updating the diagnostic interface
-    # N_steps = compute_number_of_steps(prob)
-    # for (diagnostic, sample, stride) in zip(diagnostics, initial_samples, strides)
-    #     if diagnostic.stores_data
-    #         N_samples = cld(N_steps, stride) + 1
-    #         setup_diagnostic_group(simulation, diagnostic, N_samples, sample, t0;
-    #             writer.h5_kwargs)
-    #     end
-    # end
+    for (diagnostic, sample) in zip(diagnostics, initial_samples)
+        if diagnostic.stores_data
+            setup_diagnostic_group(writer, diagnostic, sample, t0)
+        end
+    end
 end
 
-# TODO need to have extent growable!!!
-function write_to!(writer::HDF5Writer, diagnostic, idx::Integer, sample, time)
+function write_to!(writer::HDF5Writer, diagnostic, sample, step::Integer, time)
     isinitialized(writer) ||
         error("HDF5Writer has not been initialized — call initialize! before write_to!")
     h5group = writer.simulation[diagnostic.name]
-    # TODO better check on ndims
-    h5group["data"][fill(:, ndims(sample))..., idx] = sample
-    h5group["time"][idx] = time
+    n = size(h5group["step"], 1) + 1
+    HDF5.set_extent_dims(h5group["data"], (size(sample)..., n))
+    HDF5.set_extent_dims(h5group["time"], (n,))
+    HDF5.set_extent_dims(h5group["step"], (n,))# TODO perhaps remove this
+    h5group["data"][fill(:, ndims(sample))..., n] = sample# TODO better check on ndim
+    h5group["time"][n] = time
+    h5group["step"][n] = step # TODO perhaps remove this
 end
 
 # TODO make less ambiguos
@@ -150,6 +149,10 @@ function restore_checkpoint(writer::HDF5Writer, prob::SpectralODEProblem,
     end
     t = read(writer.simulation["checkpoint"], "time")
     step = read(writer.simulation["checkpoint"], "step")
+
+    # Drop any uncommitted or post-checkpoint rows from all diagnostic datasets
+    truncate_to_checkpoint!(writer, step)
+
     return cache, step, t
 end
 
@@ -241,47 +244,51 @@ end
 
 # TODO check if new dim of fields, in that case probably should re-create simulation group
 """
-    setup_diagnostic_group(simulation, diagnostic, N_samples, sample, t0; h5_kwargs)
+    setup_diagnostic_group(writer, diagnostic, sample, t0)
 
-  Creates an HDF5 group for `diagnostic` inside `simulation`, pre-allocating datasets for
-  `N_samples` time steps and writing the initial sample. On a resume path, extends the
-  existing datasets to the new `N_samples`.
+  Creates an unlimited extendable HDF5 group for `diagnostic` inside `writer.simulation`,
+  starting at size 0. Writes the initial sample at row 1. On a resume path, the group
+  already exists and `truncate_to_checkpoint!` handles cleanup.
 """
-function setup_diagnostic_group(simulation, diagnostic, N_samples, sample, t0; h5_kwargs)
-    if !haskey(simulation, diagnostic.name)
-        # Create diagnostic group
-        h5group = create_group(simulation, diagnostic.name)
+function setup_diagnostic_group(writer::HDF5Writer, diagnostic, sample, t0)
+    simulation = writer.simulation
+    h5_kwargs = writer.h5_kwargs
+    haskey(simulation, diagnostic.name) && return   # resume path: group already exists
 
-        # Create dataset to store samples and associated time
-        dset = create_dataset(h5group, "data", datatype(eltype(sample)),
-            (size(sample)..., typemax(Int64));
-            chunk=default_chunk(sample), h5_kwargs...)
-        HDF5.set_extent_dims(dset, (size(sample)..., N_samples))
-        dset = create_dataset(h5group, "time", datatype(eltype(t0)), (typemax(Int64),);
-            chunk=default_chunk(t0), h5_kwargs...)
-        HDF5.set_extent_dims(dset, (N_samples,))
+    h5group = create_group(simulation, diagnostic.name)
+    # Create dataset to store samples and accompanying time
+    create_dataset(h5group, "data", datatype(eltype(sample)), ((size(sample)..., 0),
+        (size(sample)..., -1)); chunk=default_chunk(sample), h5_kwargs...)
+    create_dataset(h5group, "time", Float64, ((0,), (-1,));
+        chunk=default_chunk(t0), h5_kwargs...)
+    create_dataset(h5group, "step", Int64, ((0,), (-1,));
+        chunk=default_chunk(t0), fill_value=-1, h5_kwargs...)
+    write_attribute(h5group, "metadata", diagnostic.metadata)
 
-        # Add metadata
-        write_attribute(h5group, "metadata", diagnostic.metadata)
-
-        # TODO where should this logic be?
-        # Store initial sample
-        h5group["data"][fill(:, ndims(sample))..., 1] = sample
-        h5group["time"][1] = t0
-
-        # Store the initial conditions
-        #write_state(simulation, 1, state, t0)
-    else
-        # Resume path: extend datasets to new size
-        h5group = open_group(simulation, diagnostic.name)
-        # Extend size of arrays
-        # Open dataset
-        dset = open_dataset(h5group, "data")
-        HDF5.set_extent_dims(dset, (size(sample)..., N_samples))
-        dset = open_dataset(h5group, "time")
-        HDF5.set_extent_dims(dset, (N_samples,))
-    end
+    write_to!(writer, diagnostic, sample, 0, t0)
 end
+
+"""
+    truncate_to_checkpoint!(writer, step_c)
+
+  On resume, drops any rows beyond `step_c` from all diagnostic datasets. Rows with
+  `step == -1` (uncommitted, written during a crash) are also dropped. This restores
+  the datasets to a clean state before continuing.
+"""
+function truncate_to_checkpoint!(writer::HDF5Writer, step_c::Integer)
+    for (name, obj) in writer.simulation
+        obj isa HDF5.Group && haskey(obj, "step") || continue
+        steps = read(obj["step"])
+        bad = findfirst(s -> s < 0 || s > step_c, steps)
+        n = isnothing(bad) ? length(steps) : bad - 1
+        if n < length(steps)
+            @info "Diagnostic \"$name\": dropping $(length(steps) - n) row(s) beyond step $step_c"
+            HDF5.set_extent_dims(obj["data"], (size(obj["data"])[1:(end-1)]..., n))
+            HDF5.set_extent_dims(obj["time"], (n,))
+            HDF5.set_extent_dims(obj["step"], (n,))
+        end
+    end
+end # TODO ensure this behaviour is correct
 
 # -------------------------------------- Attributes ----------------------------------------
 """
