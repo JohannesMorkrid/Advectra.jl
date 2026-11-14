@@ -2,45 +2,55 @@
 #                                        Diagnostics                                        
 # ------------------------------------------------------------------------------------------
 
-# ---------------------------------- Main Functionality ------------------------------------
+# ---------------------------------- Diagnostic Struct -------------------------------------
 
-struct Diagnostic{N<:AbstractString,M<:Function,L<:AbstractString,A<:Tuple,
-                  K<:NamedTuple}
-    name::N
+"""
+    Diagnostic{M, S, A, K}
+
+  Runtime diagnostic object. Owns its schedule so `should_sample`, `advance_schedule!`
+  and `setup!` dispatch directly on it.
+"""
+struct Diagnostic{M<:Function,S<:AbstractSchedule,A<:Tuple,K<:NamedTuple}
+    name::String
     method::M
-    metadata::L
+    schedule::S
+    metadata::String
     assumes_spectral_state::Bool
     stores_data::Bool
     args::A
     kwargs::K
 
-    function Diagnostic(; name::AbstractString,
-                        method::Function,
-                        metadata::String="",
-                        assumes_spectral_state::Bool=false,
-                        stores_data::Bool=true,
-                        args::Tuple=(),
-                        kwargs=NamedTuple())
-        new{typeof(name),typeof(method),typeof(metadata),typeof(args),
-            typeof(kwargs)}(name, method, metadata, assumes_spectral_state, stores_data,
-                            args, kwargs)
+    function Diagnostic(; name::String,
+        method::M,
+        schedule::S=Every(1),
+        metadata::String="",
+        assumes_spectral_state::Bool=false,
+        stores_data::Bool=true,
+        args::A=(),
+        kwargs::K=NamedTuple()) where {M<:Function,S<:AbstractSchedule,A<:Tuple,K<:NamedTuple}
+        new{M,S,A,K}(name, method, schedule, metadata, assumes_spectral_state, stores_data,
+            args, kwargs)
     end
 end
 
 """
     (diagnostic::Diagnostic)(state, prob, time)
 
-  Apply diagnostic `method` with the right `args` and `kwargs` stored in the `Diagnostic`.
+  Apply the diagnostic method with its stored args and kwargs.
 """
 @inline function (diagnostic::Diagnostic)(state, prob, time)
     diagnostic.method(state, prob, time, diagnostic.args...; diagnostic.kwargs...)
 end
 
+should_sample(diagnostic::Diagnostic, step, t) = isdue(diagnostic.schedule, step, t)
+advance_schedule!(diagnostic::Diagnostic) = advance_schedule!(diagnostic.schedule)
+setup!(dia::Diagnostic, args...; kwargs...) = setup!(dia.schedule, args...; kwargs...)
+
 function Base.show(io::IO, m::MIME"text/plain", diagnostic::Diagnostic)
     print(io, diagnostic.name, ": (spectral=", diagnostic.assumes_spectral_state,
-          ", stores_data=", diagnostic.stores_data, ")")
-    length(diagnostic.args) != 0 ? print(io, ", args=", diagnostic.args) : nothing
-    length(diagnostic.kwargs) != 0 ? print(io, ", kwargs=", diagnostic.kwargs) : nothing
+        ", stores_data=", diagnostic.stores_data, ")")
+    length(diagnostic.args) != 0 && print(io, ", args=", diagnostic.args)
+    length(diagnostic.kwargs) != 0 && print(io, ", kwargs=", diagnostic.kwargs)
 end
 
 # -------------------------------- Building Of Diagnostics ---------------------------------
@@ -51,16 +61,30 @@ end
 
 # ---------------------------------- Diagnostics Recipe ------------------------------------
 
+"""
+    DiagnosticRecipe
+
+  Lightweight user-facing specification for a diagnostic. Holds the method, an already-
+  constructed `AbstractSchedule`, an optional storage limit, and any extra kwargs passed
+  to `build_diagnostic`. The schedule is constructed here (no `prob` needed); `setup!`
+  is called later in `initialize_diagnostics` once `prob` and `t0` are known.
+"""
 struct DiagnosticRecipe
     method::Function
-    stride::Int
+    schedule::AbstractSchedule
     storage_limit::String
     kwargs::NamedTuple
 
-    function DiagnosticRecipe(method::Function; stride::Int=-1, storage_limit="", kwargs...)
-        new(method, stride, storage_limit, NamedTuple(kwargs))
+    function DiagnosticRecipe(method::Function; storage_limit::String="", kwargs...)
+        # Default schedule: sample every step
+        schedule = build_schedule(; kwargs...)
+        isnothing(schedule) && (schedule = Every(1))
+        remaining_kwargs = NamedTuple(filter(kv -> kv.first ∉ keys(SCHEDULE_KWARGS), kwargs))
+        new(method, schedule, storage_limit, remaining_kwargs)
     end
 end
+
+# ---------------------------------- Diagnostics Macro ------------------------------------
 
 macro diagnostics(expr)
     if expr.head == :vect  # Vector literal
@@ -89,16 +113,11 @@ macro diagnostics(expr)
     return Expr(:vect, recipes...)
 end
 
-"""
-
-  Allows for single method()
-"""
 function parse_diagnostic_expr(expr)
     if expr isa Symbol
         return :(DiagnosticRecipe($expr))
     elseif expr isa Expr && expr.head == :call
         method = expr.args[1]
-
         kwargs = []
         for arg in expr.args[2:end]
             if arg isa Expr && arg.head == :parameters

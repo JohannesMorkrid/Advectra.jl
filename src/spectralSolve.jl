@@ -16,17 +16,13 @@
     (default: `Output(prob)` with a single `HDF5Writer`).
 
   ## Keyword Arguments
-  - `resume`: If `true`, restores the integrator state from the most recent checkpoint
-    stored in the first capable writer (default: `false`).
   - `debug`: If `true`, rethrows errors instead of printing them (default: `false`).
 """
 function spectral_solve(prob::SpectralODEProblem, scheme::AbstractODEAlgorithm=MSS3(),
-    output::Output=Output(prob);
-    resume::Bool=false,
-    debug::Bool=false)
+    output::Output=Output(prob); debug::Bool=false)
 
-    # Initialize cache and tracking — restores checkpoint if resume=true and one exists
-    cache, step, t = initialize_solve(prob, scheme, output; resume)
+    # Initialize cache and tracking from checkpoint if resume=true and one exists
+    cache, step, t = initialize_solve(prob, scheme, output)
 
     dt = prob.dt
 
@@ -67,8 +63,13 @@ end
   and holds a stored checkpoint, the cache and time are restored from it.
 """
 function initialize_solve(prob::SpectralODEProblem, scheme::AbstractODEAlgorithm,
-    output::Output; resume::Bool=false)
+    output::Output)
 
-    restored = resume ? restore_checkpoint(output, prob, scheme) : nothing
-    isnothing(restored) ? (get_cache(prob, scheme), 0, first(prob.tspan)) : restored
+    restored = restore_checkpoint(output, prob, scheme)
+    isnothing(restored) && return get_cache(prob, scheme), 0, first(prob.tspan)
+
+    # Resume and resync schedules to checkpoint t
+    cache, step, t, Δt_prev = restored
+    setup_schedules!(output, prob, t; Δt_prev)
+    return restored
 end

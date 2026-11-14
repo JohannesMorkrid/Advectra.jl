@@ -2,32 +2,6 @@
 #                                   Diagnostics Sampling                                    
 # ------------------------------------------------------------------------------------------
 
-# ------------------------------- Initialization ------------------------------------------
-
-"""
-    initialize_diagnostics(prob, state, state_hat, t0)
-
-  Builds each `Diagnostic` from `prob.diagnostic_recipes` and samples it once at `t0`.
-  Returns the vector of diagnostics and the vector of initial samples.
-"""
-function initialize_diagnostics(prob::SpectralODEProblem, state, state_hat, t0)
-    diagnostics = Diagnostic[]
-    initial_samples = []
-
-    for recipe in prob.diagnostic_recipes
-        diagnostic = build_diagnostic(recipe.method, prob; recipe.kwargs...)
-        push!(diagnostics, diagnostic)
-
-        # Determine if sampling is done in physical or spectral space
-        input = diagnostic.assumes_spectral_state ? state_hat : state
-        # Sample once and store output
-        sample = diagnostic(input, prob, t0)
-        push!(initial_samples, sample)
-    end
-
-    return diagnostics, initial_samples
-end
-
 # ----------------------------------- Runtime Handling -------------------------------------
 
 """

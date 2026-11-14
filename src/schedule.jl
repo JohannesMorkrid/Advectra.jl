@@ -136,6 +136,7 @@ end
 # Constructor linker
 const SCHEDULE_KWARGS = Dict(
     :every => Every,
+    :stride => Every, # Alias
     :dt => EveryT,
     :at => At,
 )

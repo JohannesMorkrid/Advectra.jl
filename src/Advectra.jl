@@ -26,6 +26,9 @@ export OperatorRecipe, build_operators, build_operator # TODO perhaps remove and
 # reciprocal, spectral_exp, spectral_expm1,
 # spectral_log, hyper_diffusion
 
+include("schedule.jl")
+export Every, EveryT, At
+
 using ProgressMeter, Interpolations
 include("diagnostics/diagnostics.jl")
 export radial_density_profile, poloidal_density_profile, radial_vorticity_profile,

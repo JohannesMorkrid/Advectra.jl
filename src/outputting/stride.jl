@@ -1,30 +1,35 @@
 # ------------------------------------------------------------------------------------------
-#                                   Stride & Storage Size                                   
+#                                   Stride & Storage Size
 # ------------------------------------------------------------------------------------------
 
-# ----------------------------------- Sampling Strategy ------------------------------------
+# ------------------------------- Storage Limit Validation ---------------------------------
 
 """
-    determine_strides(initial_samples, prob, total_storage_limit)
+    validate_storage_limits(initial_samples, prob, total_storage_limit)
 
-  Determines the per-diagnostic stride and checks that the cumulative storage requirement
-  does not exceed `total_storage_limit` (if set). Prints the estimated total file size.
+  Checks per-diagnostic `storage_limit` values and the overall `total_storage_limit`
+  against estimated storage requirements based on the schedule. Prints the estimated
+  total file size.
 """
-function determine_strides(initial_samples, prob::SpectralODEProblem, total_storage_limit)
-    strides = Int[]
+function validate_storage_limits(initial_samples, prob::SpectralODEProblem,
+    total_storage_limit)
     storage_requirements = Int[]
     total_storage_requirement = 0
 
     for (recipe, sample) in zip(prob.diagnostic_recipes, initial_samples)
-        @unpack stride, storage_limit = recipe
         context = "($(recipe.method)) "
-
-        N_samples, stride = determine_sampling_strategy(sample, stride, storage_limit, prob;
-            context=context)
-        storage_requirement = compute_storage_need(N_samples, stride, sample; context)
-        # Accumulate
+        N_steps = compute_number_of_steps(prob)
+        # Estimate N_samples from the schedule — Every(stride) gives exact count,
+        # EveryT and At give approximate counts
+        N_samples = estimated_samples(recipe.schedule, N_steps, prob)
+        storage_requirement = compute_storage_need(N_steps, 1, sample; context=context) # placeholder
+        if !isempty(recipe.storage_limit)
+            storage_bytes = parse_storage_limit(recipe.storage_limit)
+            storage_requirement > storage_bytes &&
+                @warn context * "estimated storage $(format_bytes(storage_requirement)) " *
+                    "may exceed storage_limit $(recipe.storage_limit)."
+        end
         total_storage_requirement += storage_requirement
-        push!(strides, stride)
         push!(storage_requirements, storage_requirement)
     end
 
@@ -37,9 +42,17 @@ function determine_strides(initial_samples, prob::SpectralODEProblem, total_stor
         error("The Output requires $(format_bytes(total_storage_requirement)), which is \
                more than the storage_limit: $total_storage_limit.")
     end
-
-    return strides
 end
+
+"""
+    estimated_samples(schedule, N_steps, prob)
+
+  Estimates the number of samples a schedule will produce over `N_steps`.
+"""
+estimated_samples(schedule::Every, N_steps, prob) = cld(N_steps, schedule.stride) + 1
+estimated_samples(schedule::EveryT, N_steps, prob) =
+    floor(Int, (last(prob.tspan) - first(prob.tspan)) / schedule.dt) + 1
+estimated_samples(schedule::At, N_steps, prob) = length(schedule.occurrences) + 1
 
 """
     determine_sampling_strategy(sample, stride, storage_limit, prob; context="")

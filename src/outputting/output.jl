@@ -69,8 +69,10 @@ function Output(prob::SpectralODEProblem;
 
     # Prepare physical-space buffer and sample each diagnostic once at t0
     state, t0 = prepare_initial_state(prob; physical_transform=physical_transform)
-    # TODO this method probably does not work anymore
     diagnostics, initial_samples = initialize_diagnostics(prob, state, prob.u0_hat, t0)
+
+    # Validate storage limits — no longer needed for pre-allocation, just for user feedback
+    validate_storage_limits(initial_samples, prob, storage_limit)
 
     # Resolve simulation name once — all writers share the same resolved string
     simulation_name = resolve_simulation_name(simulation_name, prob)
@@ -130,7 +132,51 @@ function prepare_initial_state(prob; physical_transform=identity)
     return state, t0
 end
 
-# --------------------------------- Checkpoint Interface -----------------------------------
+# ------------------------------- Diagnostic Initialization --------------------------------
+
+"""
+    initialize_diagnostics(prob, state, state_hat, t0)
+
+  Builds each `Diagnostic` from `prob.diagnostic_recipes` and samples it once at `t0`.
+  Returns the vector of diagnostics and the vector of initial samples. Schedule syncing
+  is handled separately by `setup_schedules!`.
+"""
+function initialize_diagnostics(prob, state, state_hat, t0)
+    diagnostics = Diagnostic[]
+    initial_samples = []
+
+    for recipe in prob.diagnostic_recipes
+        diagnostic = build_diagnostic(recipe.method, prob; recipe.kwargs...)
+
+        # Sync schedule to t0, does not sync with checkpoint at this stage
+        setup!(diagnostic, prob.dt, first(prob.tspan), t0)
+
+        push!(diagnostics, diagnostic)
+
+        input = diagnostic.assumes_spectral_state ? state_hat : state
+        sample = diagnostic(input, prob, t0)
+        push!(initial_samples, sample)
+    end
+
+    return diagnostics, initial_samples
+end
+
+"""
+    setup_schedules!(output, prob, t; Δt_prev=nothing)
+
+  Realigns all diagnostic schedules to the current time `t`. Called at `Output`
+  construction (with `t = t0`) and again in `initialize_solve` after restoring a
+  checkpoint (with `t = checkpoint_t`). `Δt_prev` is the timestep from the previous
+  run — when provided and different from `prob.dt`, `Every` will warn that the sampling
+  interval in physical time has changed.
+"""
+function setup_schedules!(output::Output, prob, t; Δt_prev=nothing)
+    for diagnostic in output.diagnostics
+        setup!(diagnostic, prob.dt, first(prob.tspan), t; Δt_prev)
+    end
+end
+
+# --------------------------------- Checkpoint Interface ----------------------------------
 
 """
     store_checkpoint!(output, cache, step, time)
@@ -147,19 +193,20 @@ end
 """
     restore_checkpoint(output, prob, scheme)
 
-  Finds the first writer with a stored checkpoint and restores `cache, step, t` from it.
-  Returns `nothing` if no checkpoint is found, leaving the caller to handle the fresh-start
-  fallback.
+  Finds the first writer with a stored checkpoint and restores `(cache, step, t, Δt_prev)`
+  from it. Returns `nothing` if no checkpoint is found, leaving the caller to handle the
+  fresh-start fallback. `Δt_prev` is the timestep of the previous run, used by
+  `setup_schedules!` to warn if it changed.
 """
 function restore_checkpoint(output::Output, prob::SpectralODEProblem,
     scheme::AbstractODEAlgorithm)
     output.resume || return nothing
     checkpoint_writer = findfirst(has_checkpoint, output.writers)
     isnothing(checkpoint_writer) && return nothing
-    # TODO perhaps the returned fields will change
-    cache, step, t = restore_checkpoint(output.writers[checkpoint_writer], prob, scheme)
+    restored = restore_checkpoint(output.writers[checkpoint_writer], prob, scheme)
+    cache, step, t, Δt_prev = restored
     @info "Resuming from checkpoint at t=$t (step=$step)"
-    return cache, step, t
+    return restored
 end
 
 # ------------------------------------ Base overloads --------------------------------------

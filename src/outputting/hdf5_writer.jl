@@ -150,10 +150,14 @@ function restore_checkpoint(writer::HDF5Writer, prob::SpectralODEProblem,
     t = read(writer.simulation["checkpoint"], "time")
     step = read(writer.simulation["checkpoint"], "step")
 
+    # Read previous Δt for schedule syncing — may be missing in older files
+    Δt_prev = haskey(attributes(writer.simulation), "dt") ?
+              read_attribute(writer.simulation, "dt") : nothing
+
     # Drop any uncommitted or post-checkpoint rows from all diagnostic datasets
     truncate_to_checkpoint!(writer, step)
 
-    return cache, step, t
+    return cache, step, t, Δt_prev
 end
 
 # ---------------------------------- File / Group Setup ------------------------------------
@@ -411,3 +415,11 @@ function Base.show(io::IO, ::MIME"text/plain", writer::HDF5Writer)
     print(io, "HDF5Writer → ", writer.simulation.file.filename,
         " (group: ", writer.simulation.id == -1 ? "invalid" : HDF5.name(writer.simulation), ")")
 end
+
+# TODO list:
+#create_or_open_group
+#setup_diagnostic_group
+#open_or_create_simulation_group
+#writing to diagnostics?
+#How to handle resuming and checkpoints, they are similar
+#How to handle extent of hdf5 dataset
