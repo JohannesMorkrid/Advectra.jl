@@ -48,6 +48,8 @@ end
 
 isinitialized(writer::LocalWriter) = !isempty(writer.data)
 supports_checkpoint(::LocalWriter) = false
+available_storage(::LocalWriter) = Int(Sys.free_memory())
+filepath(::LocalWriter) = ""
 
 # --------------------------------------- Base.show ----------------------------------------
 

@@ -93,6 +93,8 @@ has_checkpoint(writer::HDF5Writer) = isinitialized(writer) && haskey(writer.simu
   convention.
 """
 HDF5.file(writer::HDF5Writer) = writer.simulation.file
+filepath(writer::HDF5Writer) = isinitialized(writer) ? HDF5.file(writer).filename : ""
+available_storage(::HDF5Writer) = available_disk_space(determine_filepath(""))
 
 """
     setsimulation!(writer::HDF5Writer, simulation::HDF5.Group)

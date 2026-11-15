@@ -30,6 +30,8 @@
   - `resume`: If `true`, appends to existing output files and restores the checkpoint.
     If `false` and a file exists, an error is raised — pass `overwrite_existing=true`
     on the writer to explicitly overwrite (default: `false`).
+  - `print_report`: If `true`, prints the storage estimate report at construction time
+    (default: `true`).
 
   # Usage examples
 
@@ -63,16 +65,27 @@ end
 function Output(prob::SpectralODEProblem;
     writers::AbstractVector{<:AbstractWriter}=[HDF5Writer()],
     physical_transform::PT=identity,
-    storage_limit::AbstractString="",
+    storage_limit::Union{AbstractString,Nothing}="",
     simulation_name::Union{AbstractString,Symbol,Nothing}="advectra",
-    resume::Bool=false) where {PT<:Function}
+    resume::Bool=false,
+    print_report::Bool=true) where {PT<:Function}
 
-    # Prepare physical-space buffer and sample each diagnostic once at t0
+    # Prepare physical-space buffer and build diagnostics. Diagnostics whose schedule is
+    # driven by storage_limit are built with Every(-1, typemax(Int)) and resolved below.
     state, t0 = prepare_initial_state(prob; physical_transform=physical_transform)
     diagnostics, initial_samples = initialize_diagnostics(prob, state, prob.u0_hat, t0)
 
-    # Validate storage limits — no longer needed for pre-allocation, just for user feedback
-    validate_storage_limits(initial_samples, prob, storage_limit)
+    # Resolve storage_limit-driven schedules (infer Every(n) from per-diagnostic storage_limit)
+    resolve_schedules!(diagnostics, initial_samples, prob)
+
+    # Estimate storage for all diagnostics (pure, no side effects)
+    estimates = storage_estimates(diagnostics, initial_samples, prob)
+
+    # Optionally print the report
+    print_report && print_storage_report(estimates, writers)
+
+    # Validate per-diagnostic and total limits (errors if exceeded)
+    validate_storage!(estimates, prob, writers, storage_limit)
 
     # Resolve simulation name once — all writers share the same resolved string
     simulation_name = resolve_simulation_name(simulation_name, prob)
@@ -136,10 +149,9 @@ end
 
 """
     initialize_diagnostics(prob, state, state_hat, t0)
-
-  Builds each `Diagnostic` from `prob.diagnostic_recipes` and samples it once at `t0`.
-  Returns the vector of diagnostics and the vector of initial samples. Schedule syncing
-  is handled separately by `setup_schedules!`.
+ 
+  Builds each `Diagnostic` from `prob.diagnostic_recipes` and takes an initial sample at
+  `t0`. Schedule alignment is left to `resolve_schedules!`, which runs immediately after.
 """
 function initialize_diagnostics(prob, state, state_hat, t0)
     diagnostics = Diagnostic[]
@@ -147,9 +159,6 @@ function initialize_diagnostics(prob, state, state_hat, t0)
 
     for recipe in prob.diagnostic_recipes
         diagnostic = build_diagnostic(recipe.method, prob; recipe.kwargs...)
-
-        # Sync schedule to t0, does not sync with checkpoint at this stage
-        setup!(diagnostic, prob.dt, first(prob.tspan), t0)
 
         push!(diagnostics, diagnostic)
 

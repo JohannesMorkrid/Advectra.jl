@@ -40,14 +40,24 @@
 
   - `store_checkpoint!(writer, cache, step, time)`:
       Store a checkpoint of the integrator `cache` at `step`/`time`. Defaults to no-op.
-      
+
   ## Not given a default — must be implemented when `supports_checkpoint` returns `true`:
 
-  - `restore_checkpoint(writer, prob, scheme) -> (cache, step, t)`:
+  - `restore_checkpoint(writer, prob, scheme) -> (cache, step, t, Δt_prev)`:
       Restore the integrator cache, step and time from a previously stored checkpoint.
       Only called on the first writer for which `has_checkpoint` returns `true`. Has no
       default no-op because silently returning nothing would leave the simulation in an
       uninitialised state.
+
+  ## Storage reporting:
+
+  - `available_storage(writer):
+      Returns the available storage in bytes relevant to this writer, disk space for
+      file-based writers, free RAM for in-memory writers. Returns `nothing` if the
+      query is not applicable or fails. Used by `print_storage_report`.
+
+  - `filepath(writer):
+      Returns the filepath of the writer's output file, or `""` for writers with no file.
 
   ## Trait predicates:
 
@@ -87,3 +97,9 @@ has_checkpoint(::AbstractWriter) = false
 
 """Default: writers are considered uninitialized until overridden."""
 isinitialized(::AbstractWriter) = false
+
+"""Default: storage availability is unknown or not applicable."""
+available_storage(::AbstractWriter) = nothing
+
+"""Default: writers with no output file return an empty path."""
+filepath(::AbstractWriter) = ""

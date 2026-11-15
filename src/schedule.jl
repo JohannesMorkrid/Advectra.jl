@@ -28,6 +28,25 @@ function setup!(schedule::Every, Δt, t0, t; Δt_prev=nothing, kwargs...)
     schedule.occurrence = (fld(steps, schedule.stride) + 1) * schedule.stride
 end
 
+# ----------------------------- Unresolved Schedule Marker --------------------------------
+
+"""
+    unresolved_schedule()
+ 
+  Placeholder schedule for a `DiagnosticRecipe` with a `storage_limit` but no explicit
+  schedule. Replaced by an inferred `Every(n)` during `resolve_schedules!`.
+"""
+unresolved_schedule() = Every(-1, typemax(Int))
+
+"""
+    schedule_unresolved(schedule)
+
+  Returns `true` if `schedule` was created by `unresolved_schedule` and has not yet been
+  resolved by `resolve_schedules!`.
+"""
+schedule_unresolved(schedule::Every) = schedule.stride == -1
+schedule_unresolved(::AbstractSchedule) = false
+
 # ----------------------------------- Schedule Every dt ------------------------------------
 
 _snap_dt(dt, Δt) = round(round(dt / Δt, RoundNearestTiesUp, digits=10), RoundNearestTiesUp) * Δt

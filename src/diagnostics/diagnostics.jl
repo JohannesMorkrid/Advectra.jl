@@ -78,7 +78,9 @@ struct DiagnosticRecipe
     function DiagnosticRecipe(method::Function; storage_limit::String="", kwargs...)
         # Default schedule: sample every step
         schedule = build_schedule(; kwargs...)
-        isnothing(schedule) && (schedule = Every(1))
+        # If no schedule kwarg and no storage_limit, default to Every(1), 
+        # if a storage_limit is provided it means the program should resolve the stride.
+        isnothing(schedule) && (schedule = isempty(storage_limit) ? Every(1) : unresolved_schedule())
         remaining_kwargs = NamedTuple(filter(kv -> kv.first ∉ keys(SCHEDULE_KWARGS), kwargs))
         new(method, schedule, storage_limit, remaining_kwargs)
     end
