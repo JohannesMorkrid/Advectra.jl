@@ -1,0 +1,12 @@
+style = "sciml"
+
+[options]
+annotate_untyped_fields_with_any = true
+remove_extra_newlines = true
+yas_style_nesting = true
+long_to_short_function_def = true
+join_lines_based_on_source = true
+separate_kwargs_with_semicolon = true
+whitespace_ops_in_indices = false
+whitespace_typedefs = false
+whitespace_in_kwargs = false
