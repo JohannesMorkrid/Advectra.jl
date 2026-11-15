@@ -15,7 +15,8 @@ function resolve_schedules!(diagnostics, initial_samples, prob)
     N_steps = compute_number_of_steps(prob)
     t0 = first(prob.tspan)
 
-    for (diagnostic, sample, recipe) in zip(diagnostics, initial_samples, prob.diagnostic_recipes)
+    for (diagnostic, sample, recipe) in zip(diagnostics, initial_samples,
+                                            prob.diagnostic_recipes)
         if schedule_unresolved(diagnostic.schedule)
             context = "($(diagnostic.name)) "
             storage_bytes = parse_storage_limit(recipe.storage_limit)
@@ -59,12 +60,12 @@ function storage_estimates(diagnostics, initial_samples, prob)
     for (diagnostic, sample) in zip(diagnostics, initial_samples)
         N_samples = estimated_samples(diagnostic.schedule, N_steps, prob)
         bytes = N_samples * sample_bytes(sample)
-        push!(estimates, StorageEstimate(
-            diagnostic.name,
-            string(diagnostic.schedule),
-            sample_size_str(sample),
-            N_samples,
-            bytes))
+        push!(estimates,
+              StorageEstimate(diagnostic.name,
+                              string(diagnostic.schedule),
+                              sample_size_str(sample),
+                              N_samples,
+                              bytes))
     end
 
     return estimates
@@ -84,17 +85,17 @@ function print_storage_report(estimates::Vector{StorageEstimate}, writers)
 
     println("\nEstimated storage requirements:")
     println("  ", rpad("Diagnostic", col_w[1]),
-        rpad("Schedule", col_w[2]),
-        rpad("Sample size", col_w[3]),
-        rpad("N samples", col_w[4]),
-        rpad("Uncompressed", col_w[5]))
+            rpad("Schedule", col_w[2]),
+            rpad("Sample size", col_w[3]),
+            rpad("N samples", col_w[4]),
+            rpad("Uncompressed", col_w[5]))
     println("  ", sep)
     for e in estimates
         println("  ", rpad(e.name, col_w[1]),
-            rpad(e.schedule, col_w[2]),
-            rpad(e.sample_size, col_w[3]),
-            rpad(string(e.n_samples), col_w[4]),
-            rpad(format_bytes(e.bytes), col_w[5]))
+                rpad(e.schedule, col_w[2]),
+                rpad(e.sample_size, col_w[3]),
+                rpad(string(e.n_samples), col_w[4]),
+                rpad(format_bytes(e.bytes), col_w[5]))
     end
     println("  ", sep)
     println("  Total (uncompressed): ", format_bytes(total))
@@ -104,7 +105,7 @@ function print_storage_report(estimates::Vector{StorageEstimate}, writers)
         avail = available_storage(first(writers))
         if !isnothing(avail)
             println("  Available storage:  ", format_bytes(avail),
-                "  (note: HPC quota limits may apply — set storage_limit explicitly)")
+                    "  (note: HPC quota limits may apply — set storage_limit explicitly)")
         end
     end
     println("  Compression note: blosc typically reduces field data by 2-5x\n")
@@ -120,7 +121,7 @@ end # Written by Claude
   is empty. Pass `storage_limit=nothing` on `Output` to skip the disk space check.
 """
 function validate_storage!(estimates::Vector{StorageEstimate}, prob, writers,
-    total_storage_limit)
+                           total_storage_limit)
 
     # Per-diagnostic limits
     for (estimate, recipe) in zip(estimates, prob.diagnostic_recipes)
@@ -128,7 +129,7 @@ function validate_storage!(estimates::Vector{StorageEstimate}, prob, writers,
         limit_bytes = parse_storage_limit(recipe.storage_limit)
         estimate.bytes > limit_bytes &&
             error("Diagnostic \"$(estimate.name)\" requires $(format_bytes(estimate.bytes)), " *
-                "exceeding its storage_limit=$(recipe.storage_limit).")
+                  "exceeding its storage_limit=$(recipe.storage_limit).")
     end
 
     # Explicit, disk/RAM available, or skip
@@ -140,9 +141,10 @@ function validate_storage!(estimates::Vector{StorageEstimate}, prob, writers,
     total = sum(e.bytes for e in estimates)
     total > limit_bytes &&
         error("Total estimated storage $(format_bytes(total)) exceeds " *
-            (has_explicit_limit ? "storage_limit=$total_storage_limit" : "available storage") *
-            " ($(format_bytes(limit_bytes))). Reduce sampling frequency or " *
-            "set storage_limit=nothing to skip this check.")
+              (has_explicit_limit ? "storage_limit=$total_storage_limit" :
+               "available storage") *
+              " ($(format_bytes(limit_bytes))). Reduce sampling frequency or " *
+              "set storage_limit=nothing to skip this check.")
 end
 
 # ----------------------------------- Schedule Helpers -------------------------------------
@@ -153,8 +155,9 @@ end
   Estimates the number of samples a schedule will produce over `N_steps`.
 """
 estimated_samples(schedule::Every, N_steps, prob) = cld(N_steps, schedule.stride) + 1
-estimated_samples(schedule::EveryT, N_steps, prob) =
+function estimated_samples(schedule::EveryT, N_steps, prob)
     floor(Int, (last(prob.tspan) - first(prob.tspan)) / schedule.dt) + 1
+end
 estimated_samples(schedule::At, N_steps, prob) = length(schedule.occurrences)
 
 """
@@ -172,7 +175,9 @@ sample_bytes(::Nothing) = 0
 
   Human-readable sample dimensions + element type, e.g. `"512×512 Float32"`.
 """
-sample_size_str(sample::AbstractArray) = join(size(sample), "×") * " " * string(eltype(sample))
+function sample_size_str(sample::AbstractArray)
+    join(size(sample), "×") * " " * string(eltype(sample))
+end
 sample_size_str(sample::Number) = "scalar " * string(typeof(sample))
 sample_size_str(sample::Tuple) = "$(length(sample))-tuple " * string(eltype(sample))
 sample_size_str(::Nothing) = "N/A"
@@ -210,7 +215,7 @@ end
   `storage_limit`. Throws if the imposed limit is too strict.
 """
 function recommend_stride(storage_limit::Int, N_steps::Int, sample::AbstractArray;
-    context="")
+                          context="")
     field_bytes = length(sample) * sizeof(eltype(sample))
     # Determine how many fields can be fully stored
     max_samples = storage_limit ÷ field_bytes

@@ -16,10 +16,11 @@ function plot_density(state, prob, time; digits=2, kwargs...)
     plot_field(prob.domain, n, time; field_name=L"n", digits=digits, kwargs...)
 end
 
-function build_diagnostic(::Val{:plot_density}; dt, kwargs...)
+function build_diagnostic(::Val{:plot_density}; schedule, dt, kwargs...)
     kwargs = (; digits=ceil(Int, -log10(dt)))
     Diagnostic(; name="Plot density",
                method=plot_density,
+               schedule=schedule,
                metadata="Display density",
                stores_data=false,
                kwargs=kwargs)
@@ -29,14 +30,15 @@ end
 
 function plot_vorticity(state, prob, time; digits=2, kwargs...)
     Ω = selectdim(state, ndims(prob.domain) + 1, 2) |> Array
-    plot_field(prob.domain, Ω, time; field_name=L"\Omega",
-               digits=digits, color=:jet, kwargs...)
+    plot_field(prob.domain, Ω, time; field_name=L"\Omega", digits=digits, color=:jet,
+               kwargs...)
 end
 
-function build_diagnostic(::Val{:plot_vorticity}; dt, kwargs...)
+function build_diagnostic(::Val{:plot_vorticity}; schedule, dt, kwargs...)
     kwargs = (; digits=ceil(Int, -log10(dt)))
     Diagnostic(; name="Plot vorticity",
                method=plot_vorticity,
+               schedule=schedule,
                metadata="Display vorticity",
                stores_data=false,
                kwargs=kwargs)
@@ -49,10 +51,11 @@ function plot_temperature(state, prob, time; digits=2, kwargs...)
     plot_field(prob.domain, T, time; field_name=L"T", digits=digits, color=:jet, kwargs...)
 end
 
-function build_diagnostic(::Val{:plot_temperature}; dt, kwargs...)
+function build_diagnostic(::Val{:plot_temperature}; schedule, dt, kwargs...)
     kwargs = (; digits=ceil(Int, -log10(dt)))
     Diagnostic(; name="Plot temperature",
                method=plot_temperature,
+               schedule=schedule,
                metadata="Display temperature",
                stores_data=false,
                kwargs=kwargs)
@@ -72,10 +75,11 @@ end
 
 requires_operator(::Val{:plot_potential}; kwargs...) = [OperatorRecipe(:solve_phi)]
 
-function build_diagnostic(::Val{:plot_potential}; dt, kwargs...)
+function build_diagnostic(::Val{:plot_potential}; schedule, dt, kwargs...)
     kwargs = (; digits=ceil(Int, -log10(dt)))
     Diagnostic(; name="Display potential",
                method=plot_potential,
+               schedule=schedule,
                metadata="Displays the potential",
                assumes_spectral_state=true,
                stores_data=false,

@@ -53,7 +53,7 @@
     )
 """
 mutable struct Output{DV<:AbstractArray{<:Diagnostic},UB<:AbstractArray,
-    WV<:AbstractVector{<:AbstractWriter},PT<:Function}
+                      WV<:AbstractVector{<:AbstractWriter},PT<:Function}
     diagnostics::DV # TODO perhaps diagnostics will be removed all together from Output? Or removed from SpectralODEProblem?
     state_buffer::UB
     writers::WV
@@ -63,12 +63,12 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},UB<:AbstractArray,
 end
 
 function Output(prob::SpectralODEProblem;
-    writers::AbstractVector{<:AbstractWriter}=[HDF5Writer()],
-    physical_transform::PT=identity,
-    storage_limit::Union{AbstractString,Nothing}="",
-    simulation_name::Union{AbstractString,Symbol,Nothing}="advectra",
-    resume::Bool=false,
-    print_report::Bool=true) where {PT<:Function}
+                writers::AbstractVector{<:AbstractWriter}=[HDF5Writer()],
+                physical_transform::PT=identity,
+                storage_limit::Union{AbstractString,Nothing}="",
+                simulation_name::Union{AbstractString,Symbol,Nothing}="advectra",
+                resume::Bool=false,
+                print_report::Bool=true) where {PT<:Function}
 
     # Prepare physical-space buffer and build diagnostics. Diagnostics whose schedule is
     # driven by storage_limit are built with Every(-1, typemax(Int)) and resolved below.
@@ -105,8 +105,9 @@ end
 
   Convenience form accepting a single writer without wrapping it in a vector.
 """
-Output(prob::SpectralODEProblem, writer::AbstractWriter; kwargs...) =
+function Output(prob::SpectralODEProblem, writer::AbstractWriter; kwargs...)
     Output(prob; writers=[writer], kwargs...)
+end
 
 # --------------------------------- Simulation Name Resolution ----------------------------
 
@@ -128,7 +129,7 @@ function resolve_simulation_name(simulation_name, prob)::String
     simulation_name == :parameters && return parameter_string(prob.p)
     simulation_name isa String && return simulation_name
     error("$simulation_name is not a valid simulation_name. " *
-        "Use nothing, :timestamp, :parameters, or a plain String.")
+          "Use nothing, :timestamp, :parameters, or a plain String.")
 end
 
 # --------------------------------- Prepare Initial State ---------------------------------
@@ -158,7 +159,8 @@ function initialize_diagnostics(prob, state, state_hat, t0)
     initial_samples = []
 
     for recipe in prob.diagnostic_recipes
-        diagnostic = build_diagnostic(recipe.method, prob; recipe.kwargs...)
+        diagnostic = build_diagnostic(recipe.method, prob; schedule=recipe.schedule,
+                                      recipe.kwargs...)
 
         push!(diagnostics, diagnostic)
 
@@ -193,7 +195,8 @@ end
   Fans out to all writers that support checkpointing. All supporting writers receive the
   checkpoint — redundancy is cheap since checkpointing is rare and data is small.
 """
-function store_checkpoint!(output::Output, cache::AbstractCache, step::Integer, time::Number)
+function store_checkpoint!(output::Output, cache::AbstractCache, step::Integer,
+                           time::Number)
     for writer in output.writers
         store_checkpoint!(writer, cache, step, time)
     end
@@ -208,7 +211,7 @@ end
   `setup_schedules!` to warn if it changed.
 """
 function restore_checkpoint(output::Output, prob::SpectralODEProblem,
-    scheme::AbstractODEAlgorithm)
+                            scheme::AbstractODEAlgorithm)
     output.resume || return nothing
     checkpoint_writer = findfirst(has_checkpoint, output.writers)
     isnothing(checkpoint_writer) && return nothing
@@ -222,11 +225,10 @@ end
 
 flush!(output::Output, step) = foreach(w -> flush!(w, step), output.writers)
 
-function Base.close(output::Output)
+Base.close(output::Output) =
     for writer in output.writers
         close(writer)
     end
-end
 
 function Base.show(io::IO, m::MIME"text/plain", output::Output)
     print(io, "Output")

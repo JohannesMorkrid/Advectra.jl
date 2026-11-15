@@ -121,7 +121,7 @@ end
   ### Return
   `Array` where row represent the component and the first column is the max cfl, with the
   remaining columns being indices.
-""" # TODO consider a better output format (not worthy of an issue)
+"""
 function cfl(state, prob, time, velocity=Val(:ExB), component=Val(:x); silent::Bool=false)
     velocities = _compute_velocity(state, prob, time, velocity)
     CFLs = compute_cfl(velocities, prob, time, component)
@@ -161,12 +161,14 @@ function requires_operator(::Val{cfl}; velocity_method, kwargs...)
     end
 end
 
-function build_diagnostic(::Val{:cfl}; velocity=:ExB, component=:magnitude,
+function build_diagnostic(::Val{:cfl}; schedule=Every(1), velocity=:ExB,
+                          component=:magnitude,
                           silent=false, kwargs...)
     context = isuppercase(string(velocity)[1]) ? string(velocity) :
               titlecase(string(velocity))
     Diagnostic(; name="$context CFL",
                method=cfl,
+               schedule=schedule,
                metadata=cfl_metadata(context, component),
                assumes_spectral_state=assumes_spectral(Val(velocity)),
                args=(Val(velocity), Val(component)),

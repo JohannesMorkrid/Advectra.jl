@@ -16,8 +16,9 @@ parse_storage_limit(limit::Integer) = limit
 function parse_storage_limit(limit::AbstractString)
     # Units dictionary
     units = Dict("B" => 1, "KB" => 10^3, "KIB" => 1024, "MB" => 10^6, "MIB" => 1024^2,
-        "GB" => 10^9, "GIB" => 1024^3, "TB" => 10^12, "TIB" => 1024^4,
-        "PB" => 10^15, "PIB" => 1024^5, "EB" => Int128(10^18), "EIB" => Int128(1024^6))
+                 "GB" => 10^9, "GIB" => 1024^3, "TB" => 10^12, "TIB" => 1024^4,
+                 "PB" => 10^15, "PIB" => 1024^5, "EB" => Int128(10^18),
+                 "EIB" => Int128(1024^6))
 
     # Match numeric value and optional unit
     # \s* matches 0 or more white spaces (\s) at the beginning ^ and end $
@@ -70,7 +71,6 @@ function parameter_string(parameters::P) where {P<:NamedTuple}
     join([string(k, "=", v) for (k, v) in sort(collect(pairs(parameters)))], ", ")
 end
 
-
 # --------------------------------- File Path Resolution -----------------------------------
 
 """
@@ -92,8 +92,9 @@ end
 
   Throws if `state[end]` is NaN, indicating a numerical breakdown.
 """
-assert_no_nan(state::AbstractArray, time) =
+function assert_no_nan(state::AbstractArray, time)
     isnan(state[end]) && error("Breakdown occured at t=$time")
+end
 
 # TODO move to AdvectraGPUArraysExt.jl
 function assert_no_nan(state::Union{GPUField,GPUState,AbstractGPUArray}, time)

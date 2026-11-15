@@ -21,18 +21,21 @@ struct LocalWriter <: AbstractWriter
 end
 
 # By default empty dictionaries before `initialized!
-LocalWriter() = LocalWriter(Dict{String,Vector}(), Dict{String,Vector{Float64}}(), Ref("advectra"))
+function LocalWriter()
+    LocalWriter(Dict{String,Vector}(), Dict{String,Vector{Float64}}(), Ref("advectra"))
+end
 
 # --------------------------------------- Interface ----------------------------------------
 
 function initialize!(writer::LocalWriter, prob, diagnostics, initial_samples, strides, t0;
-    simulation_name::String="advectra", kwargs...)
+                     simulation_name::String="advectra", kwargs...)
     writer.simulation_name[] = simulation_name
     for (diagnostic, sample) in zip(diagnostics, initial_samples)
         writer.data[diagnostic.name] = Vector{typeof(sample)}()
         writer.t[diagnostic.name] = Vector{Float64}()
         # Store initial sample
-        push!(writer.data[diagnostic.name], isa(sample, AbstractArray) ? copy(sample) : sample)
+        push!(writer.data[diagnostic.name],
+              isa(sample, AbstractArray) ? copy(sample) : sample)
         push!(writer.t[diagnostic.name], t0)
     end
 end
@@ -56,5 +59,5 @@ filepath(::LocalWriter) = ""
 function Base.show(io::IO, ::MIME"text/plain", writer::LocalWriter)
     keys_str = isempty(writer.data) ? "(empty)" : join(keys(writer.data), ", ")
     print(io, "LocalWriter (simulation: ", writer.simulation_name[],
-        ", diagnostics: ", keys_str, ")")
+          ", diagnostics: ", keys_str, ")")
 end

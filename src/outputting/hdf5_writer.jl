@@ -33,8 +33,7 @@ struct HDF5Writer <: AbstractWriter
 end
 
 function HDF5Writer(; filename::AbstractString=basename(tempname()) * ".h5",
-    overwrite_existing::Bool=false, flush_interval::Int=10, h5_kwargs...)
-
+                    overwrite_existing::Bool=false, flush_interval::Int=10, h5_kwargs...)
     file = open_or_create_hdf5_file(filename)
     h5_kwargs = merge((blosc=3,), h5_kwargs)
     simulation = placeholder_group(file)
@@ -44,7 +43,7 @@ end
 # --------------------------------------- Interface ----------------------------------------
 
 function initialize!(writer::HDF5Writer, prob, diagnostics, initial_samples, t0;
-    simulation_name::String="advectra", resume::Bool=false, kwargs...)
+                     simulation_name::String="advectra", resume::Bool=false, kwargs...)
     simulation = open_or_create_simulation_group(writer, simulation_name, prob; resume)
 
     # Transfer HDF5 hid_t and file properties to the placeholder
@@ -74,7 +73,7 @@ end
 function flush!(writer::HDF5Writer, step)
     isopen(writer) || return
     if now() - writer.last_flush_time[] >= Minute(writer.flush_interval) ||
-        step % 1024 == 0
+       step % 1024 == 0
         flush(writer.simulation.file)
         writer.last_flush_time[] = now()
     end
@@ -84,7 +83,9 @@ Base.close(writer::HDF5Writer) = close(writer.simulation.file)
 Base.isopen(writer::HDF5Writer) = HDF5.isvalid(writer.simulation.file)
 isinitialized(writer::HDF5Writer) = HDF5.isvalid(writer.simulation)
 supports_checkpoint(::HDF5Writer) = true
-has_checkpoint(writer::HDF5Writer) = isinitialized(writer) && haskey(writer.simulation, "checkpoint")
+function has_checkpoint(writer::HDF5Writer)
+    isinitialized(writer) && haskey(writer.simulation, "checkpoint")
+end
 
 """
     HDF5.file(writer::HDF5Writer)
@@ -117,7 +118,7 @@ end
   the simulation group, overwriting any previously stored checkpoint.
 """
 function store_checkpoint!(writer::HDF5Writer, cache::AbstractCache, step::Integer,
-    time::Number)
+                           time::Number)
     isinitialized(writer) || return
     checkpoint = create_or_open_group(writer.simulation, "checkpoint")
     for key in fieldnames(typeof(cache))
@@ -137,7 +138,7 @@ end # TODO needs some rethinking
   Restores the integrator cache for `scheme` from the checkpoint stored in `writer`.
 """
 function restore_checkpoint(writer::HDF5Writer, prob::SpectralODEProblem,
-    scheme::AbstractODEAlgorithm)
+                            scheme::AbstractODEAlgorithm)
     # TODO validate that dt and other critical parameters match
     # abs(t_c - (t0 + step_c * Δt_c)) < tol || error("Checkpoint is inconsistent")
     # t0_new == t0 || error("t0 cannot change on resume")
@@ -187,24 +188,30 @@ placeholder_group(file::HDF5.File) = HDF5.Group(-1, file)
 
 # ----------------------------- Simulation Group Flag Checks -------------------------------
 
-check_contradictory_flags(resume, overwrite_existing) =
+function check_contradictory_flags(resume, overwrite_existing)
     resume && overwrite_existing &&
         error("resume=true and overwrite_existing=true are contradictory. " *
-            "Set overwrite_existing=false to resume, or resume=false to overwrite.")
+              "Set overwrite_existing=false to resume, or resume=false to overwrite.")
+end
 
-check_ambiguous_existing(resume, overwrite_existing, exists, simulation_name, filepath) =
+function check_ambiguous_existing(resume, overwrite_existing, exists, simulation_name,
+                                  filepath)
     !resume && !overwrite_existing && exists &&
         error("Simulation \"$simulation_name\" already exists in \"$filepath\". " *
-            "Pass resume=true to continue or overwrite_existing=true to overwrite.")
+              "Pass resume=true to continue or overwrite_existing=true to overwrite.")
+end
 
-warn_overwrite_existing(overwrite_existing, exists, simulation_name, filepath) =
+function warn_overwrite_existing(overwrite_existing, exists, simulation_name, filepath)
     overwrite_existing && @warn "overwrite_existing=true — " *
-        (exists ? "overwriting \"$simulation_name\" in \"$filepath\"."
-                                 : "no existing file found, starting fresh.")
+          (exists ? "overwriting \"$simulation_name\" in \"$filepath\"."
+           : "no existing file found, starting fresh.")
+end
 
-warn_no_checkpoint(resume, exists, simulation_name, filepath) =
-    resume && !exists && @warn "resume=true but \"$simulation_name\" not found " *
-        "in \"$filepath\" — starting fresh."
+function warn_no_checkpoint(resume, exists, simulation_name, filepath)
+    resume && !exists &&
+        @warn "resume=true but \"$simulation_name\" not found " *
+              "in \"$filepath\" — starting fresh."
+end
 
 # ------------------------------------------------------------------------------------------
 
@@ -215,8 +222,7 @@ warn_no_checkpoint(resume, exists, simulation_name, filepath) =
   full resume/overwrite logic. See the `Output` docstring for the full behaviour matrix.
 """
 function open_or_create_simulation_group(writer::HDF5Writer, simulation_name::String, prob;
-    resume::Bool=false)
-
+                                         resume::Bool=false)
     file = HDF5.file(writer)
     filepath = file.filename
     exists = haskey(file, simulation_name)
@@ -263,12 +269,13 @@ function setup_diagnostic_group(writer::HDF5Writer, diagnostic, sample, t0)
 
     h5group = create_group(simulation, diagnostic.name)
     # Create dataset to store samples and accompanying time
-    create_dataset(h5group, "data", datatype(eltype(sample)), ((size(sample)..., 0),
-        (size(sample)..., -1)); chunk=default_chunk(sample), h5_kwargs...)
+    create_dataset(h5group, "data", datatype(eltype(sample)),
+                   ((size(sample)..., 0),
+                    (size(sample)..., -1)); chunk=default_chunk(sample), h5_kwargs...)
     create_dataset(h5group, "time", Float64, ((0,), (-1,));
-        chunk=default_chunk(t0), h5_kwargs...)
+                   chunk=default_chunk(t0), h5_kwargs...)
     create_dataset(h5group, "step", Int64, ((0,), (-1,));
-        chunk=default_chunk(t0), fill_value=-1, h5_kwargs...)
+                   chunk=default_chunk(t0), fill_value=-1, h5_kwargs...)
     write_attribute(h5group, "metadata", diagnostic.metadata)
 
     write_to!(writer, diagnostic, sample, 0, t0)
@@ -313,15 +320,16 @@ function write_attributes(simulation, prob::SpectralODEProblem)
 
     # Store the config file used to create the Output struct
     configfile = Base.source_path()
-    !isempty(configfile) && open(configfile, "r") do file
-        write_attribute(simulation, "config-file", read(file, String))
-    end
+    !isnothing(configfile) && !isempty(configfile) &&
+        open(configfile, "r") do file
+            write_attribute(simulation, "config-file", read(file, String))
+        end
 end
 
 function write_attributes(simulation, domain::AbstractDomain)
     # Construct list of attributes by removing derived attributes
     attributes = setdiff(fieldnames(typeof(domain)),
-        (:x, :y, :kx, :ky, :SC, :transforms, :precision, :MemoryType))
+                         (:x, :y, :kx, :ky, :SC, :transforms, :precision, :MemoryType))
     for attribute in attributes
         write_attribute(simulation, string(attribute), getproperty(domain, attribute))
     end
@@ -341,15 +349,15 @@ end
 """
 function validate_resume_attributes(simulation::HDF5.Group, prob::SpectralODEProblem)
     @warn "Advectra only checks a subset of critical numerical parameters (Nx, Ny, dt, " *
-        "real_transform). Advectra does not check if ALL input parameters are identical " *
-        "to the run you are resuming from. It is the responsibility of the user to make " *
-        "sure the simulations are compatible."
+          "real_transform). Advectra does not check if ALL input parameters are identical " *
+          "to the run you are resuming from. It is the responsibility of the user to make " *
+          "sure the simulations are compatible."
 
     # List of attributes to check and their corresponding values in 'prob' or 'prob.domain'
     expected_values = Dict("dt" => prob.dt,
-        "Nx" => prob.domain.Nx,
-        "Ny" => prob.domain.Ny,
-        "real_transform" => prob.domain.real_transform)
+                           "Nx" => prob.domain.Nx,
+                           "Ny" => prob.domain.Ny,
+                           "real_transform" => prob.domain.real_transform)
 
     for (key, expected) in expected_values
         haskey(attributes(simulation), key) ||
@@ -369,7 +377,7 @@ end
   Creates or opens an HDF5 group at `path` within `parent`.
 """
 function create_or_open_group(parent::Union{HDF5.File,HDF5.Group}, path::AbstractString;
-    properties...)
+                              properties...)
     haskey(parent, path) ? open_group(parent, path, properties...) :
     create_group(parent, path, properties...)
 end
@@ -380,7 +388,7 @@ end
   Deletes the dataset `name` if it exists, then writes a fresh one.
 """
 function rewrite_dataset(parent::Union{HDF5.File,HDF5.Group}, name::AbstractString, data;
-    pv...)
+                         pv...)
     haskey(parent, name) && delete_object(parent[name])
     write_dataset(parent, name, data; pv...)
 end
@@ -391,7 +399,7 @@ end
   Computes a sensible HDF5 chunk shape from `sample`.
 """
 function default_chunk(sample; scalar_target_bytes=64 * 1024,
-    array_target_bytes=1024 * 1024)
+                       array_target_bytes=1024 * 1024)
     elsize = sizeof(eltype(sample))
     if ndims(sample) == 0
         n = max(1, round(Int, scalar_target_bytes / elsize))
@@ -408,14 +416,16 @@ end
 
   Appends `.h5` to `filename` if it has no extension.
 """
-add_h5_if_missing(filename::AbstractString) =
+function add_h5_if_missing(filename::AbstractString)
     splitext(filename)[end] == "" ? splitext(filename)[1] * ".h5" : filename
+end
 
 # --------------------------------------- Base.show ----------------------------------------
 
 function Base.show(io::IO, ::MIME"text/plain", writer::HDF5Writer)
     print(io, "HDF5Writer → ", writer.simulation.file.filename,
-        " (group: ", writer.simulation.id == -1 ? "invalid" : HDF5.name(writer.simulation), ")")
+          " (group: ",
+          writer.simulation.id == -1 ? "invalid" : HDF5.name(writer.simulation), ")")
 end
 
 # TODO list:

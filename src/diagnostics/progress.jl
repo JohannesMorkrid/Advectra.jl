@@ -15,11 +15,12 @@ function progress(state, prob, time, progress_bar; t0, dt)
     update!(progress_bar, round(Int, (time - t0) / dt))
 end
 
-function build_diagnostic(::Val{:progress}; tspan, dt, kwargs...)
+function build_diagnostic(::Val{:progress}; schedule=Every(1), tspan, dt, kwargs...)
     args = (Progress(floor(Int, (last(tspan) - first(tspan)) / dt); showspeed=true),)
     kwargs = (; t0=first(tspan), dt=dt)
     Diagnostic(; name="Progress",
                method=progress,
+               schedule=schedule,
                metadata="Progressbar.",
                assumes_spectral_state=true,
                stores_data=false,

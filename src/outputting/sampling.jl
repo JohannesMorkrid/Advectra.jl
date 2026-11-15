@@ -12,8 +12,7 @@
   are active), flushes all writers, and checks for NaN breakdown.
 """
 function handle_output!(output::Output, step::Integer, state::AbstractArray,
-    prob::SpectralODEProblem, time::Number)
-
+                        prob::SpectralODEProblem, time::Number)
     output.transformed = false
 
     # Remove modes after each step using user defined function

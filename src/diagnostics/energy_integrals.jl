@@ -63,9 +63,10 @@ function potential_energy_integral(state_hat, prob, time)
     parseval_integral(n_hat, domain) / 2
 end
 
-function build_diagnostic(::Val{:potential_energy_integral}; kwargs...)
+function build_diagnostic(::Val{:potential_energy_integral}; schedule=Every(1), kwargs...)
     Diagnostic(; name="Potential energy integral",
                method=potential_energy_integral,
+               schedule=schedule,
                metadata="Potential energy density.",
                assumes_spectral_state=true)
 end
@@ -88,9 +89,10 @@ function requires_operator(::Val{:kinetic_energy_integral}; kwargs...)
     [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_x), OperatorRecipe(:diff_y)]
 end
 
-function build_diagnostic(::Val{:kinetic_energy_integral}; kwargs...)
+function build_diagnostic(::Val{:kinetic_energy_integral}; schedule=Every(1), kwargs...)
     Diagnostic(; name="Kinetic energy integral",
                method=kinetic_energy_integral,
+               schedule=schedule,
                metadata="Kinetic energy density.",
                assumes_spectral_state=true)
 end
@@ -112,9 +114,11 @@ function requires_operator(::Val{:zonal_kinetic_energy_integral}; kwargs...)
     [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_x)]
 end
 
-function build_diagnostic(::Val{:zonal_kinetic_energy_integral}; kwargs...)
+function build_diagnostic(::Val{:zonal_kinetic_energy_integral}; schedule=Every(1),
+                          kwargs...)
     Diagnostic(; name="Zonal kinetic energy integral",
                method=zonal_kinetic_energy_integral,
+               schedule=schedule,
                metadata="Kinetic energy density (k_y=0).",
                assumes_spectral_state=true)
 end
@@ -136,9 +140,11 @@ function requires_operator(::Val{:streamer_kinetic_energy_integral}; kwargs...)
     [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_y)]
 end
 
-function build_diagnostic(::Val{:streamer_kinetic_energy_integral}; kwargs...)
+function build_diagnostic(::Val{:streamer_kinetic_energy_integral}; schedule=Every(1),
+                          kwargs...)
     Diagnostic(; name="Streamer kinetic energy integral",
                method=streamer_kinetic_energy_integral,
+               schedule=schedule,
                metadata="Kinetic energy density (k_x=0).",
                assumes_spectral_state=true)
 end
@@ -151,9 +157,10 @@ function total_energy_integral(state_hat, prob, time)
     kinetic_energy_integral(state_hat, prob, time)
 end
 
-function build_diagnostic(::Val{:total_energy_integral}; kwargs...)
+function build_diagnostic(::Val{:total_energy_integral}; schedule=Every(1), kwargs...)
     Diagnostic(; name="Total energy integral",
                method=total_energy_integral,
+               schedule=schedule,
                metadata="Total energy density.",
                assumes_spectral_state=true)
 end
@@ -167,9 +174,10 @@ function enstrophy_energy_integral(state_hat, prob, time)
     parseval_integral(Ω_hat, domain) / 2
 end
 
-function build_diagnostic(::Val{:enstrophy_energy_integral}; kwargs...)
+function build_diagnostic(::Val{:enstrophy_energy_integral}; schedule=Every(1), kwargs...)
     Diagnostic(; name="Enstrophy energy integral",
                method=enstrophy_energy_integral,
+               schedule=schedule,
                metadata="Enstrophy energy density.",
                assumes_spectral_state=true)
 end
@@ -203,9 +211,10 @@ function requires_operator(::Val{:radial_flux}; kwargs...)
     [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_y)]
 end
 
-function build_diagnostic(::Val{:radial_flux}; kwargs...)
+function build_diagnostic(::Val{:radial_flux}; schedule=Every(1), kwargs...)
     Diagnostic(; name="Radial flux",
                method=radial_flux,
+               schedule=schedule,
                metadata="Average radial particle flux",
                assumes_spectral_state=true)
 end
@@ -239,9 +248,10 @@ function requires_operator(::Val{:poloidal_flux}; kwargs...)
     [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_x)]
 end
 
-function build_diagnostic(::Val{:poloidal_flux}; kwargs...)
+function build_diagnostic(::Val{:poloidal_flux}; schedule=Every(1), kwargs...)
     Diagnostic(; name="Poloidal flux",
                method=poloidal_flux,
+               schedule=schedule,
                metadata="Average poloidal particle flux",
                assumes_spectral_state=true)
 end
@@ -267,9 +277,10 @@ function requires_operator(::Val{:flux_magnitude}; kwargs...)
          requires_operator(Val(:poloidal_flux); kwargs...))
 end
 
-function build_diagnostic(::Val{:flux_magnitude}; kwargs...)
+function build_diagnostic(::Val{:flux_magnitude}; schedule=Every(1), kwargs...)
     Diagnostic(; name="Flux magnitude",
                method=flux_magnitude,
+               schedule=schedule,
                metadata="Magnitude of total particle flux",
                assumes_spectral_state=true)
 end
@@ -294,11 +305,12 @@ function requires_operator(::Val{:resistive_dissipation_integral}; kwargs...)
     [OperatorRecipe(:solve_phi)]
 end
 
-function build_diagnostic(::Val{:resistive_dissipation_integral}; adiabaticity_symbol=:C,
-                          kwargs...)
+function build_diagnostic(::Val{:resistive_dissipation_integral}; schedule=Every(1),
+                          adiabaticity_symbol=:C, kwargs...)
     diagnostic_kwargs = (; adiabaticity_symbol=adiabaticity_symbol)
     Diagnostic(; name="Resistive dissipation integral",
                method=resistive_dissipation_integral,
+               schedule=schedule,
                metadata="Resistive dissipation energy density.",
                assumes_spectral_state=true,
                kwargs=diagnostic_kwargs)
@@ -319,11 +331,12 @@ function requires_operator(::Val{:potential_dissipation_integral}; order=3, kwar
     [OperatorRecipe(:laplacian; order=order, alias=:hyper_laplacian)]
 end
 
-function build_diagnostic(::Val{:potential_dissipation_integral}; diffusivity_symbol=:ν,
-                          kwargs...)
+function build_diagnostic(::Val{:potential_dissipation_integral}; schedule=Every(1),
+                          diffusivity_symbol=:ν, kwargs...)
     diagnostic_kwargs = (; diffusivity_symbol=diffusivity_symbol)
     Diagnostic(; name="Potential dissipation integral",
                method=potential_dissipation_integral,
+               schedule=schedule,
                metadata="Potential energy dissipation density.",
                assumes_spectral_state=true,
                kwargs=diagnostic_kwargs)
@@ -348,11 +361,12 @@ function requires_operator(::Val{:kinetic_dissipation_integral}; order=3, kwargs
         OperatorRecipe(:laplacian; order=order, alias=:hyper_laplacian)]
 end
 
-function build_diagnostic(::Val{:kinetic_dissipation_integral}; viscosity_symbol=:μ,
-                          kwargs...)
+function build_diagnostic(::Val{:kinetic_dissipation_integral}; schedule=Every(1),
+                          viscosity_symbol=:μ, kwargs...)
     diagnostic_kwargs = (; viscosity_symbol=viscosity_symbol)
     Diagnostic(; name="Kinetic dissipation integral",
                method=kinetic_dissipation_integral,
+               schedule=schedule,
                metadata="Kinetic energy dissipation density.",
                assumes_spectral_state=true,
                kwargs=diagnostic_kwargs)
@@ -372,12 +386,13 @@ function requires_operator(::Val{:viscous_dissipation_integral}; order=3, kwargs
          requires_operator(Val(:kinetic_dissipation_integral); order=order, kwargs...))
 end
 
-function build_diagnostic(::Val{:viscous_dissipation_integral}; diffusivity_symbol=:ν,
-                          viscosity_symbol=:μ, kwargs...)
+function build_diagnostic(::Val{:viscous_dissipation_integral}; schedule=Every(1),
+                          diffusivity_symbol=:ν, viscosity_symbol=:μ, kwargs...)
     diagnostic_kwargs = (; diffusivity_symbol=diffusivity_symbol,
                          viscosity_symbol=viscosity_symbol)
     Diagnostic(; name="Viscous dissipation integral",
                method=viscous_dissipation_integral,
+               schedule=schedule,
                metadata="Viscous energy dissipation density.",
                assumes_spectral_state=true,
                kwargs=diagnostic_kwargs)
@@ -404,12 +419,13 @@ function requires_operator(::Val{:enstrophy_dissipation_integral}; kwargs...)
     [OperatorRecipe(:laplacian; order=3, alias=:hyper_laplacian)]
 end
 
-function build_diagnostic(::Val{:enstrophy_dissipation_integral}; diffusivity_symbol=:ν,
-                          viscosity_symbol=:μ, kwargs...)
+function build_diagnostic(::Val{:enstrophy_dissipation_integral}; schedule=Every(1),
+                          diffusivity_symbol=:ν, viscosity_symbol=:μ, kwargs...)
     diagnostic_kwargs = (; diffusivity_symbol=diffusivity_symbol,
                          viscosity_symbol=viscosity_symbol)
     Diagnostic(; name="Enstrophy dissipation integral",
                method=enstrophy_dissipation_integral,
+               schedule=schedule,
                metadata="Enstrophy energy dissipation density.",
                assumes_spectral_state=true,
                kwargs=diagnostic_kwargs)
@@ -434,14 +450,15 @@ function requires_operator(::Val{:energy_evolution_integral}; order=3, kwargs...
          requires_operator(Val(:viscous_dissipation_integral); order=order, kwargs...))
 end
 
-function build_diagnostic(::Val{:energy_evolution_integral}; adiabaticity_symbol=:C,
-                          diffusivity_symbol=:ν,
+function build_diagnostic(::Val{:energy_evolution_integral}; schedule=Every(1),
+                          adiabaticity_symbol=:C, diffusivity_symbol=:ν,
                           viscosity_symbol=:μ, kwargs...)
     diagnostic_kwargs = (; adiabaticity_symbol=adiabaticity_symbol,
                          diffusivity_symbol=diffusivity_symbol,
                          viscosity_symbol=viscosity_symbol)
     Diagnostic(; name="Energy evolution integral",
                method=energy_evolution_integral,
+               schedule=schedule,
                metadata="Energy density evolution.",
                assumes_spectral_state=true,
                kwargs=diagnostic_kwargs)
@@ -462,12 +479,13 @@ function requires_operator(::Val{:enstrophy_evolution_integral}; order=3, kwargs
          requires_operator(Val(:enstrophy_dissipation_integral); order=order, kwargs...))
 end
 
-function build_diagnostic(::Val{:enstrophy_evolution_integral}; diffusivity_symbol=:ν,
-                          viscosity_symbol=:μ, kwargs...)
+function build_diagnostic(::Val{:enstrophy_evolution_integral}; schedule=Every(1),
+                          diffusivity_symbol=:ν, viscosity_symbol=:μ, kwargs...)
     diagnostic_kwargs = (; diffusivity_symbol=diffusivity_symbol,
                          viscosity_symbol=viscosity_symbol)
     Diagnostic(; name="Enstrophy evolution integral",
                method=enstrophy_evolution_integral,
+               schedule=schedule,
                metadata="Enstrophy density evolution.",
                assumes_spectral_state=true,
                kwargs=diagnostic_kwargs)

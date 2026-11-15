@@ -182,7 +182,7 @@ end
   
   General build method for probe diagnostics which prepares the positions and metadata.
 """
-function build_probe_diagnostic(; name, method, positions, domain, quantities,
+function build_probe_diagnostic(; name, method, schedule, positions, domain, quantities,
                                 assumes_spectral_state=false, interpolation=nothing)
     # Bound and type checking
     positions = prepare_positions(positions, domain)
@@ -194,6 +194,7 @@ function build_probe_diagnostic(; name, method, positions, domain, quantities,
     end
     Diagnostic(; name=name,
                method=method,
+               schedule=schedule,
                metadata=prepare_metadata(positions, quantities),
                assumes_spectral_state=assumes_spectral_state,
                args=args,
@@ -216,10 +217,11 @@ function probe_density(state, prob, time, positions; interpolation=nothing)
     probe_field(n, prob.domain, positions, interpolation)
 end
 
-function build_diagnostic(::Val{:probe_density}; domain, positions,
+function build_diagnostic(::Val{:probe_density}; schedule=Every(1), domain, positions,
                           interpolation=nothing, kwargs...)
     build_probe_diagnostic(; name="Density probe",
                            method=probe_density,
+                           schedule=schedule,
                            positions=positions,
                            domain=domain,
                            quantities="density",
@@ -238,10 +240,11 @@ function probe_vorticity(state, prob, time, positions; interpolation=nothing)
     probe_field(Ω, prob.domain, positions, interpolation)
 end
 
-function build_diagnostic(::Val{:probe_vorticity}; domain, positions,
+function build_diagnostic(::Val{:probe_vorticity}; schedule=Every(1), domain, positions,
                           interpolation=nothing, kwargs...)
     build_probe_diagnostic(; name="Vorticity probe",
                            method=probe_vorticity,
+                           schedule=schedule,
                            positions=positions,
                            domain=domain,
                            quantities="vorticity",
@@ -260,10 +263,11 @@ function probe_temperature(state, prob, time, positions; interpolation=nothing)
     probe_field(Ω, prob.domain, positions, interpolation)
 end
 
-function build_diagnostic(::Val{:probe_temperature}; domain, positions,
+function build_diagnostic(::Val{:probe_temperature}; schedule=Every(1), domain, positions,
                           interpolation=nothing, kwargs...)
     build_probe_diagnostic(; name="Temperature probe",
                            method=probe_temperature,
+                           schedule=schedule,
                            positions=positions,
                            domain=domain,
                            quantities="temperature",
@@ -289,10 +293,11 @@ end
 
 requires_operator(::Val{:probe_potential}; kwargs...) = [OperatorRecipe(:solve_phi)]
 
-function build_diagnostic(::Val{:probe_potential}; domain, positions,
+function build_diagnostic(::Val{:probe_potential}; schedule=Every(1), domain, positions,
                           interpolation=nothing, kwargs...)
     build_probe_diagnostic(; name="Phi probe",
                            method=probe_potential,
+                           schedule=schedule,
                            positions=positions,
                            domain=domain,
                            quantities="potential",
@@ -323,10 +328,12 @@ function requires_operator(::Val{:probe_radial_velocity}; kwargs...)
     [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_y)]
 end
 
-function build_diagnostic(::Val{:probe_radial_velocity}; domain, positions,
+function build_diagnostic(::Val{:probe_radial_velocity}; schedule=Every(1), domain,
+                          positions,
                           interpolation=nothing, kwargs...)
     build_probe_diagnostic(; name="Radial velocity probe",
                            method=probe_radial_velocity,
+                           schedule=schedule,
                            positions=positions,
                            domain=domain,
                            quantities="radial velocity",
@@ -374,10 +381,11 @@ function requires_operator(::Val{:probe_all}; kwargs...)
     [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_y)]
 end
 
-function build_diagnostic(::Val{:probe_all}; domain, positions, interpolation=nothing,
-                          kwargs...)
+function build_diagnostic(::Val{:probe_all}; schedule=Every(1), domain, positions,
+                          interpolation=nothing, kwargs...)
     build_probe_diagnostic(; name="All probe",
                            method=probe_all,
+                           schedule=schedule,
                            positions=positions,
                            domain=domain,
                            quantities=["density",

@@ -21,15 +21,16 @@ struct Diagnostic{M<:Function,S<:AbstractSchedule,A<:Tuple,K<:NamedTuple}
     kwargs::K
 
     function Diagnostic(; name::String,
-        method::M,
-        schedule::S=Every(1),
-        metadata::String="",
-        assumes_spectral_state::Bool=false,
-        stores_data::Bool=true,
-        args::A=(),
-        kwargs::K=NamedTuple()) where {M<:Function,S<:AbstractSchedule,A<:Tuple,K<:NamedTuple}
+                        method::M,
+                        schedule::S=Every(1),
+                        metadata::String="",
+                        assumes_spectral_state::Bool=false,
+                        stores_data::Bool=true,
+                        args::A=(),
+                        kwargs::K=NamedTuple()) where {M<:Function,S<:AbstractSchedule,
+                                                       A<:Tuple,K<:NamedTuple}
         new{M,S,A,K}(name, method, schedule, metadata, assumes_spectral_state, stores_data,
-            args, kwargs)
+                     args, kwargs)
     end
 end
 
@@ -48,7 +49,7 @@ setup!(dia::Diagnostic, args...; kwargs...) = setup!(dia.schedule, args...; kwar
 
 function Base.show(io::IO, m::MIME"text/plain", diagnostic::Diagnostic)
     print(io, diagnostic.name, ": (spectral=", diagnostic.assumes_spectral_state,
-        ", stores_data=", diagnostic.stores_data, ")")
+          ", stores_data=", diagnostic.stores_data, ")")
     length(diagnostic.args) != 0 && print(io, ", args=", diagnostic.args)
     length(diagnostic.kwargs) != 0 && print(io, ", kwargs=", diagnostic.kwargs)
 end
@@ -80,8 +81,9 @@ struct DiagnosticRecipe
         schedule = build_schedule(; kwargs...)
         # If no schedule kwarg and no storage_limit, default to Every(1), 
         # if a storage_limit is provided it means the program should resolve the stride.
-        isnothing(schedule) && (schedule = isempty(storage_limit) ? Every(1) : unresolved_schedule())
-        remaining_kwargs = NamedTuple(filter(kv -> kv.first ∉ keys(SCHEDULE_KWARGS), kwargs))
+        isnothing(schedule) &&
+            (schedule = isempty(storage_limit) ? Every(1) : unresolved_schedule())
+        remaining_kwargs = NamedTuple(filter(k -> k.first ∉ keys(SCHEDULE_KWARGS), kwargs))
         new(method, schedule, storage_limit, remaining_kwargs)
     end
 end

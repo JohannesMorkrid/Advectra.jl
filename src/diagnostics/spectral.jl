@@ -14,7 +14,7 @@
   - `ky`: gets modes along the `ky` axis in spectral space.
   - `both`: gets all the modes in spectral space.
   - `kx`: gets modes along the `kx=ky` line in spectral space. 
-""" # Interface
+"""
 function get_modes(state_hat::AbstractArray, prob, time; axis::Symbol=:both)
     get_modes(state_hat, prob, time, Val(axis))
 end
@@ -39,9 +39,10 @@ function get_modes(state_hat::AbstractArray, prob, time, ::Val{:diag})
     end
 end
 
-function build_diagnostic(::Val{:get_modes}; axis=:both, kwargs...)
+function build_diagnostic(::Val{:get_modes}; schedule=Every(1), axis=:both, kwargs...)
     Diagnostic(; name="Modes",
                method=get_modes,
+               schedule=schedule,
                metadata="Modes (Complex) along $axis axis",
                assumes_spectral_state=true,
                args=(Val(axis),))
@@ -61,9 +62,10 @@ function get_log_modes(state_hat, prob, time, axis::Val{T}) where {T}
     log.(abs.(modes))
 end
 
-function build_diagnostic(::Val{:get_log_modes}; axis=:diag, kwargs...)
+function build_diagnostic(::Val{:get_log_modes}; schedule=Every(1), axis=:diag, kwargs...)
     Diagnostic(; name="Log modes",
                method=get_log_modes,
+               schedule=schedule,
                metadata="log(|modes|) along $axis axis",
                assumes_spectral_state=true,
                args=(Val(axis),))
@@ -193,13 +195,14 @@ end
 const density_energy_spectrum = potential_energy_spectrum
 
 function build_diagnostic(::Union{Val{:potential_energy_spectrum},
-                                  Val{:density_energy_spectrum}};
+                                  Val{:density_energy_spectrum}}; schedule=Every(1),
                           spectrum::Symbol=:wavenumber, kwargs...)
     start = spectrum == :wavenumber ? "Potential" :
             titlecase(string(spectrum)) * " potential"
     metadata = wavenumber_metadata(Val(spectrum)) * " Potential energy spectrum ($spectrum)"
     Diagnostic(; name=start * " energy spectrum",
                method=potential_energy_spectrum,
+               schedule=schedule,
                metadata=metadata,
                assumes_spectral_state=true,
                args=(Val(spectrum),))
@@ -234,12 +237,13 @@ function requires_operator(::Val{:kinetic_energy_spectrum}; kwargs...)
     [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_x), OperatorRecipe(:diff_y)]
 end
 
-function build_diagnostic(::Val{:kinetic_energy_spectrum}; spectrum::Symbol=:wavenumber,
-                          kwargs...)
+function build_diagnostic(::Val{:kinetic_energy_spectrum}; schedule=Every(1),
+                          spectrum::Symbol=:wavenumber, kwargs...)
     start = spectrum == :wavenumber ? "Kinetic" : titlecase(string(spectrum)) * " kinetic"
     metadata = wavenumber_metadata(Val(spectrum)) * " Kinetic energy spectrum ($spectrum)"
     Diagnostic(; name=start * " energy spectrum",
                method=kinetic_energy_spectrum,
+               schedule=schedule,
                metadata=metadata,
                assumes_spectral_state=true,
                args=(Val(spectrum),))
@@ -273,11 +277,13 @@ function requires_operator(::Val{:flux_spectrum}; kwargs...)
     [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_y)]
 end
 
-function build_diagnostic(::Val{:flux_spectrum}; spectrum::Symbol=:poloidal, kwargs...)
+function build_diagnostic(::Val{:flux_spectrum}; schedule=Every(1),
+                          spectrum::Symbol=:poloidal, kwargs...)
     start = spectrum == :wavenumber ? "Flux" : titlecase(string(spectrum)) * " flux"
     metadata = wavenumber_metadata(Val(spectrum)) * " Flux decomposition ($spectrum)"
     Diagnostic(; name=start * " spectrum",
                method=flux_spectrum,
+               schedule=schedule,
                metadata=metadata,
                assumes_spectral_state=true,
                args=(Val(spectrum),))
@@ -302,13 +308,14 @@ function enstrophy_spectrum(state_hat, prob, time; spectrum::Symbol=:radial)
     enstrophy_spectrum(state_hat, prob, time, Val(spectrum))
 end
 
-function build_diagnostic(::Val{:enstrophy_spectrum}; spectrum::Symbol=:wavenumber,
-                          kwargs...)
+function build_diagnostic(::Val{:enstrophy_spectrum}; schedule=Every(1),
+                          spectrum::Symbol=:wavenumber, kwargs...)
     start = spectrum == :wavenumber ? "Enstrophy" :
             titlecase(string(spectrum)) * " enstrophy"
     metadata = wavenumber_metadata(Val(spectrum)) * " Enstrophy spectrum ($spectrum)"
     Diagnostic(; name=start * " spectrum",
                method=enstrophy_spectrum,
+               schedule=schedule,
                metadata=metadata,
                assumes_spectral_state=true,
                args=(Val(spectrum),))
@@ -343,7 +350,7 @@ function requires_operator(::Val{:electrostatic_potential_spectrum}; kwargs...)
     [OperatorRecipe(:solve_phi)]
 end
 
-function build_diagnostic(::Val{:electrostatic_potential_spectrum};
+function build_diagnostic(::Val{:electrostatic_potential_spectrum}; schedule=Every(1),
                           spectrum::Symbol=:wavenumber, kwargs...)
     start = spectrum == :wavenumber ? "Electrostatic potential" :
             titlecase(string(spectrum)) * " electrostatic potential"
@@ -351,6 +358,7 @@ function build_diagnostic(::Val{:electrostatic_potential_spectrum};
                " Electrostatic potential spectrum ($spectrum)"
     Diagnostic(; name=start * " spectrum",
                method=electrostatic_potential_spectrum,
+               schedule=schedule,
                metadata=metadata,
                assumes_spectral_state=true,
                args=(Val(spectrum),))
