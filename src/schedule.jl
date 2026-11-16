@@ -28,6 +28,8 @@ function setup!(schedule::Every, Δt, t0, t; Δt_prev=nothing, kwargs...)
     schedule.occurrence = (fld(steps, schedule.stride) + 1) * schedule.stride
 end
 
+Base.show(io::IO, s::Every) = print(io, "Every(", s.stride, ")")
+
 # ----------------------------- Unresolved Schedule Marker --------------------------------
 
 """
@@ -93,6 +95,8 @@ function setup!(schedule::EveryT{T}, Δt, t0, t; kwargs...) where {T}
     schedule.occurrence = t0 + schedule.n * snapped_dt
 end
 
+Base.show(io::IO, s::EveryT) = print(io, "EveryT(", s.dt, ")")
+
 # --------------------------- Schedule At Specific Occurrences -----------------------------
 
 mutable struct At{T} <: AbstractSchedule
@@ -147,6 +151,8 @@ function setup!(schedule::At{T}, Δt, t0, t; kwargs...) where {T}
                    searchsortedlast(schedule.occurrences, t) + 1 :
                    searchsortedlast(schedule.occurrences, t; rev=true) + 1
 end
+
+Base.show(io::IO, s::At) = print(io, "At(", s.occurrences, ")")
 
 # ----------------------- Schedule Builder For Use With Diagnostic -------------------------
 

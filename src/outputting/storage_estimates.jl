@@ -58,14 +58,11 @@ function storage_estimates(diagnostics, initial_samples, prob)
     estimates = StorageEstimate[]
 
     for (diagnostic, sample) in zip(diagnostics, initial_samples)
-        N_samples = estimated_samples(diagnostic.schedule, N_steps, prob)
-        bytes = N_samples * sample_bytes(sample)
+        n_samples = estimated_samples(diagnostic.schedule, N_steps, prob)
         push!(estimates,
-              StorageEstimate(diagnostic.name,
-                              string(diagnostic.schedule),
-                              sample_size_str(sample),
-                              N_samples,
-                              bytes))
+              StorageEstimate(diagnostic.name, string(diagnostic.schedule),
+                              sample_size_str(sample), n_samples,
+                              n_samples * sample_bytes(sample)))
     end
 
     return estimates
@@ -78,27 +75,30 @@ end
 
   Prints a formatted storage estimate table to stdout.
 """
+fit(s, w) = rpad(length(s) > w ? s[1:(w-1)] * "…" : s, w)
+n_samples_str(n) = n >= 10_000 ? @sprintf("%.2e", n) : string(n)
+
 function print_storage_report(estimates::Vector{StorageEstimate}, writers)
-    col_w = (20, 16, 20, 10, 14)
-    sep = "─" ^ (sum(col_w) + length(col_w) * 2)
+    col_w = (24, 18, 20, 12, 10)
+    sep = "─" ^ (sum(col_w) + length(col_w) * 2 - 8)
     total = sum(e.bytes for e in estimates)
 
     println("\nEstimated storage requirements:")
-    println("  ", rpad("Diagnostic", col_w[1]),
-            rpad("Schedule", col_w[2]),
-            rpad("Sample size", col_w[3]),
-            rpad("N samples", col_w[4]),
-            rpad("Uncompressed", col_w[5]))
+    println("  ", fit("Diagnostic", col_w[1]),
+            fit("Schedule", col_w[2]),
+            fit("Sample size", col_w[3]),
+            fit("N samples", col_w[4]),
+            fit("Raw size", col_w[5]))
     println("  ", sep)
     for e in estimates
-        println("  ", rpad(e.name, col_w[1]),
-                rpad(e.schedule, col_w[2]),
-                rpad(e.sample_size, col_w[3]),
-                rpad(string(e.n_samples), col_w[4]),
-                rpad(format_bytes(e.bytes), col_w[5]))
+        println("  ", fit(e.name, col_w[1]),
+                fit(e.schedule, col_w[2]),
+                fit(e.sample_size, col_w[3]),
+                fit(n_samples_str(e.n_samples), col_w[4]),
+                fit(format_bytes(e.bytes), col_w[5]))
     end
     println("  ", sep)
-    println("  Total (uncompressed): ", format_bytes(total))
+    println("  Total (raw): ", format_bytes(total))
 
     # Available storage from first writer (disk space for HDF5, free RAM for LocalWriter)
     if !isempty(writers)
