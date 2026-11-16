@@ -49,7 +49,9 @@ schedule_unresolved(::AbstractSchedule) = false
 
 # ----------------------------------- Schedule Every dt ------------------------------------
 
-_snap_dt(dt, Δt) = round(round(dt / Δt, RoundNearestTiesUp, digits=10), RoundNearestTiesUp) * Δt
+function _snap_dt(dt, Δt::T) where {T}
+    T(round(round(dt / Δt, RoundNearestTiesUp; digits=10), RoundNearestTiesUp) * Δt)
+end
 
 mutable struct EveryT{T} <: AbstractSchedule
     dt::T
@@ -58,16 +60,15 @@ mutable struct EveryT{T} <: AbstractSchedule
     t0::T
 end
 
-function EveryT(dt::T) where T
+function EveryT(dt::T) where {T}
     dt != 0 || throw(ArgumentError("EveryT: dt must be non-zero, got $dt"))
     EveryT{T}(dt, dt, 1, zero(T))
 end
 
-function EveryT(dt::T, Δt::T) where T
+function EveryT(dt::T, Δt::T) where {T}
     dt != 0 || throw(ArgumentError("EveryT: dt must be non-zero, got $dt"))
-    sign(dt) == sign(Δt) || throw(ArgumentError(
-        "EveryT: dt and Δt must have the same sign, got dt=$dt, Δt=$Δt"
-    ))
+    sign(dt) == sign(Δt) ||
+        throw(ArgumentError("EveryT: dt and Δt must have the same sign, got dt=$dt, Δt=$Δt"))
     snapped_dt = _snap_dt(dt, Δt)
     EveryT{T}(snapped_dt, snapped_dt, 1, zero(T))
 end
@@ -78,11 +79,10 @@ function advance_schedule!(schedule::EveryT)
     schedule.occurrence = schedule.t0 + schedule.n * schedule.dt
 end
 
-function setup!(schedule::EveryT{T}, Δt, t0, t; kwargs...) where T
+function setup!(schedule::EveryT{T}, Δt, t0, t; kwargs...) where {T}
     Δt != 0 || throw(ArgumentError("EveryT: Δt must be non-zero, got $Δt"))
-    sign(schedule.dt) == sign(Δt) || throw(ArgumentError(
-        "EveryT: dt=$(schedule.dt) and Δt=$Δt must have the same sign"
-    ))
+    sign(schedule.dt) == sign(Δt) ||
+        throw(ArgumentError("EveryT: dt=$(schedule.dt) and Δt=$Δt must have the same sign"))
     snapped_dt = _snap_dt(schedule.dt, Δt)
     if !(snapped_dt ≈ schedule.dt)
         @warn "EveryT: requested dt=$(schedule.dt) snapped to $snapped_dt to align with Δt=$Δt"
@@ -101,15 +101,14 @@ mutable struct At{T} <: AbstractSchedule
     direction::Int
 end
 
-At(t::T) where T = At([t])
+At(t::T) where {T} = At([t])
 
-function At(times::AbstractArray{T}) where T
+function At(times::AbstractArray{T}) where {T}
     isempty(times) && throw(ArgumentError("At: times must not be empty"))
-    is_strictly_increasing = issorted(times, lt=(<=))
-    is_strictly_decreasing = issorted(times, lt=(>=))
-    is_strictly_increasing || is_strictly_decreasing || throw(ArgumentError(
-        "At: times must be strictly monotone (no duplicates), got $times"
-    ))
+    is_strictly_increasing = issorted(times; lt=(<=))
+    is_strictly_decreasing = issorted(times; lt=(>=))
+    is_strictly_increasing || is_strictly_decreasing ||
+        throw(ArgumentError("At: times must be strictly monotone (no duplicates), got $times"))
     At(times, 1, is_strictly_increasing ? 1 : -1)
 end
 
@@ -118,47 +117,44 @@ function isdue(schedule::At, step, t)
         schedule.direction * (t - schedule.occurrences[schedule.idx]) >= 0
 end
 
-advance_schedule!(schedule::At) =
+function advance_schedule!(schedule::At)
     1 <= schedule.idx <= length(schedule.occurrences) && (schedule.idx += 1)
+end
 
-function setup!(schedule::At{T}, Δt, t0, t; kwargs...) where T
+function setup!(schedule::At{T}, Δt, t0, t; kwargs...) where {T}
     Δt != 0 || throw(ArgumentError("At: Δt must be non-zero, got $Δt"))
     if schedule.direction == 1
-        sign(Δt) == 1 || throw(ArgumentError(
-            "At: times must be strictly increasing for forward integration (Δt > 0), got $(schedule.occurrences)"
-        ))
+        sign(Δt) == 1 ||
+            throw(ArgumentError("At: times must be strictly increasing for forward integration (Δt > 0), got $(schedule.occurrences)"))
         endpoint = maximum(schedule.occurrences) + Δt
     else
-        sign(Δt) == -1 || throw(ArgumentError(
-            "At: times must be strictly decreasing for backward integration (Δt < 0), got $(schedule.occurrences)"
-        ))
+        sign(Δt) == -1 ||
+            throw(ArgumentError("At: times must be strictly decreasing for backward integration (Δt < 0), got $(schedule.occurrences)"))
         endpoint = minimum(schedule.occurrences) + Δt
     end
     grid = t0:Δt:endpoint
-    skipped = filter(t -> !any(g -> isapprox(t, g, atol=abs(Δt)/2), grid), schedule.occurrences)
+    skipped = filter(t -> !any(g -> isapprox(t, g; atol=abs(Δt)/2), grid),
+                     schedule.occurrences)
     if !isempty(skipped)
         intervals = diff([t0; schedule.occurrences])
-        suggested_Δt = reduce(
-            (a, b) -> isapprox(mod(abs(a), abs(b)), 0, atol=1e-10) ? b : a,
-            sort(unique(abs.(intervals)))
-        )
+        suggested_Δt = reduce((a, b) -> isapprox(mod(abs(a), abs(b)), 0; atol=1e-10) ? b :
+                                        a,
+                              sort(unique(abs.(intervals))))
         @warn """At: $(length(skipped)) occurrence(s) will be skipped with Δt=$Δt: \
                  $skipped. Consider Δt≈$(schedule.direction * suggested_Δt)."""
     end
     schedule.idx = schedule.direction == 1 ?
                    searchsortedlast(schedule.occurrences, t) + 1 :
-                   searchsortedlast(schedule.occurrences, t, rev=true) + 1
+                   searchsortedlast(schedule.occurrences, t; rev=true) + 1
 end
 
 # ----------------------- Schedule Builder For Use With Diagnostic -------------------------
 
 # Constructor linker
-const SCHEDULE_KWARGS = Dict(
-    :every => Every,
-    :stride => Every, # Alias
-    :dt => EveryT,
-    :at => At,
-)
+const SCHEDULE_KWARGS = Dict(:every => Every,
+                             :stride => Every, # Alias
+                             :dt => EveryT,
+                             :at => At)
 
 function build_schedule(; kwargs...)
     found = filter(kv -> kv.first ∈ keys(SCHEDULE_KWARGS), kwargs)
